@@ -261,8 +261,8 @@ Forzar y verificar:
 # en DC01: comprobar GPOs
 Get-GPO -All | Select DisplayName
 ```
-- [ ] Auditoría (4688+cmdline, 4624/25, 4769, 4768) activa · PowerShell logging · Sysmon desplegado
-- **Validación:** abre cmd en WIN11 → en el Visor de eventos hay un **4688 con la línea de comandos**.
+- [x] Auditoría (4688+cmdline, 4624/25, 4769, 4768, 4720) activa · PowerShell SBL/Module/Transcription. **GPO `Audit-Baseline` enlazada al dominio (2026-06-13).** Sysmon → fase de telemetría.
+- **Validación:** ✅ `auditpol` en WIN11 confirma las 5 subcategorías; **4688 capturado CON línea de comandos** (`cmd /c echo SOC-LAB-MARKER-4688`, padre `powershell.exe`) y **4104** registrado. Montado de forma scriptada con [`lab-tools/Configure-AuditGPO.ps1`](lab-tools/Configure-AuditGPO.ps1) (audit.csv en SYSVOL + CSE).
 
 ---
 
@@ -309,7 +309,7 @@ GetNPUsers.py corp.local/ -dc-ip 10.10.10.10 -usersfile usuarios.txt -no-pass
 - [x] FASE 1 — DC01: Server + AD DS + DNS (corp.local) **(2026-06-13)**
 - [x] FASE 2 — Estructura AD (OUs, usuarios, grupos, objetivos Kerberos) **(2026-06-13)**
 - [x] FASE 3 — WIN11 unido al dominio **(2026-06-13, instalación desatendida)**
-- [ ] FASE 4 — GPO + Auditoría (¡telemetría!)
+- [x] FASE 4 — GPO + Auditoría (¡telemetría!) **(2026-06-13, validada end-to-end con 4688+cmdline y 4104)**
 - [ ] FASE 5 — Kali atacante
 - [ ] FASE 6 — Kerberoast end-to-end validado
 
