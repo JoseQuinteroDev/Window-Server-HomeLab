@@ -1,0 +1,40 @@
+title: LOLBin de descarga - certutil/bitsadmin/mshta con URL
+id: 7c2a1e10-3b44-4f0a-9d21-0a1b2c3d4e05
+status: experimental
+description: |
+  Detecta binarios legitimos del sistema (LOLBins) usados para descargar carga util:
+  certutil -urlcache, bitsadmin /transfer, mshta con URL. Ingress Tool Transfer.
+references:
+  - https://attack.mitre.org/techniques/T1105/
+  - https://lolbas-project.github.io/
+author: Jose Quintero
+date: 2026-06-14
+logsource:
+  category: process_creation
+  product: windows
+detection:
+  selection_certutil:
+    Image|endswith: '\certutil.exe'
+    CommandLine|contains:
+      - '-urlcache'
+      - '-verifyctl'
+      - '/urlcache'
+  selection_bitsadmin:
+    Image|endswith: '\bitsadmin.exe'
+    CommandLine|contains: '/transfer'
+  selection_mshta_url:
+    Image|endswith: '\mshta.exe'
+    CommandLine|contains:
+      - 'http://'
+      - 'https://'
+  condition: selection_certutil or selection_bitsadmin or selection_mshta_url
+fields:
+  - Image
+  - CommandLine
+  - ParentImage
+falsepositives:
+  - certutil usado para gestion de certificados sin URL (excluido por -urlcache)
+level: medium
+tags:
+  - attack.command_and_control
+  - attack.t1105

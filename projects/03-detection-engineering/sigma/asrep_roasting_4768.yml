@@ -1,0 +1,31 @@
+title: Posible AS-REP Roasting - AS-REQ sin preautenticacion
+id: 7c2a1e10-3b44-4f0a-9d21-0a1b2c3d4e04
+status: experimental
+description: |
+  Detecta peticiones de ticket de autenticacion Kerberos (evento 4768) con
+  Pre-Authentication Type = 0, es decir cuentas marcadas con DONT_REQUIRE_PREAUTH.
+  El atacante pide el AS-REP de esas cuentas para crackear el hash offline.
+references:
+  - https://attack.mitre.org/techniques/T1558/004/
+author: Jose Quintero
+date: 2026-06-14
+logsource:
+  product: windows
+  service: security
+detection:
+  selection:
+    EventID: 4768
+    PreAuthType: '0'          # 0 = sin preautenticacion -> roasteable
+  filter_machine:
+    TargetUserName|endswith: '$'
+  condition: selection and not filter_machine
+fields:
+  - TargetUserName
+  - TicketEncryptionType
+  - IpAddress
+falsepositives:
+  - Cuentas legacy que legitimamente no requieren preauth (deberian ser cero)
+level: high
+tags:
+  - attack.credential_access
+  - attack.t1558.004

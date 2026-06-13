@@ -200,7 +200,7 @@ Detalle en la sección 5. Orden recomendado: **3 → 2 → 1 → 4 → 5 → 6 �
 - [ ] KQL de validación end-to-end
 
 **Fase 2 — los 7 proyectos**
-- [ ] Proyecto 3 — Detection Engineering
+- [x] Proyecto 3 — Detection Engineering *(5 detecciones Sigma+KQL, 4 validadas por simulación; AS-REP a falta de KALI — 2026-06-14)*
 - [ ] Proyecto 2 — Threat Hunting Case Study
 - [ ] Proyecto 1 — SOC Automation Playbook
 - [ ] Proyecto 4 — Incident Response (ransomware)

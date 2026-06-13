@@ -1,0 +1,85 @@
+// =====================================================================
+//  Detection Engineering — equivalentes KQL (Microsoft Sentinel / Defender XDR)
+//  Lab: corp.local  |  Autor: Jose Quintero
+//  Nota: se desplegaran cuando el SIEM este conectado (tenant E5 dev).
+//        Sentinel: SecurityEvent (logs de Windows) y Event (Sysmon/PowerShell via AMA).
+//        Defender XDR (Advanced Hunting): DeviceProcessEvents, DeviceEvents, Identity*.
+// =====================================================================
+
+
+// ---------------------------------------------------------------------
+// 1) KERBEROASTING  (T1558.003)  -- evento 4769 con cifrado RC4 (0x17)
+// ---------------------------------------------------------------------
+// -- Microsoft Sentinel (SecurityEvent) --
+// (a) Honeypot: cualquier TGS para svc_sql (enc-agnostico)  +  (b) clasico RC4 (0x17)
+SecurityEvent
+| where EventID == 4769
+| where ServiceName !endswith "$" and ServiceName != "krbtgt"
+| where ServiceName =~ "svc_sql" or TicketEncryptionType == "0x17"
+| extend Deteccion = iff(ServiceName =~ "svc_sql", "Honeypot svc_sql", "RC4 (0x17)")
+| project TimeGenerated, Deteccion, ServiceName, TicketEncryptionType, Account, Computer, IpAddress
+| sort by TimeGenerated desc
+
+// -- Defender XDR (Advanced Hunting) --
+// IdentityDirectoryEvents
+// | where ActionType == "Kerberos service ticket requested"  // o usar 4769 via conector
+// | where AdditionalFields contains "0x17"
+
+
+// ---------------------------------------------------------------------
+// 2) POWERSHELL SOSPECHOSO  (T1059.001 / T1027)  -- 4104 Script Block
+// ---------------------------------------------------------------------
+// -- Microsoft Sentinel (Event = canal PowerShell/Operational via AMA) --
+Event
+| where Source == "Microsoft-Windows-PowerShell" and EventID == 4104
+| where RenderedDescription has_any (
+    "FromBase64String","Invoke-Expression","IEX","DownloadString",
+    "DownloadData","Net.WebClient","Invoke-WebRequest","-enc","-EncodedCommand")
+| project TimeGenerated, Computer, RenderedDescription
+| sort by TimeGenerated desc
+
+// -- Defender XDR (linea de comandos del proceso) --
+// DeviceProcessEvents
+// | where FileName in~ ("powershell.exe","pwsh.exe")
+// | where ProcessCommandLine has_any ("FromBase64String","-enc","-EncodedCommand","DownloadString","IEX","Net.WebClient")
+
+
+// ---------------------------------------------------------------------
+// 3) MANIPULACION DE DEFENDER  (T1562.001)  -- exclusiones por cmdline
+// ---------------------------------------------------------------------
+// -- Defender XDR (Advanced Hunting) --
+DeviceProcessEvents
+| where ProcessCommandLine has_any (
+    "Add-MpPreference","Set-MpPreference","-ExclusionPath","-ExclusionProcess",
+    "-ExclusionExtension","-DisableRealtimeMonitoring","DisableBehaviorMonitoring")
+| project Timestamp, DeviceName, AccountName, InitiatingProcessFileName, ProcessCommandLine
+| sort by Timestamp desc
+
+// -- Microsoft Sentinel (Sysmon EID 1 o SecurityEvent 4688) --
+// Event
+// | where Source == "Microsoft-Windows-Sysmon" and EventID == 1
+// | where RenderedDescription has_any ("Add-MpPreference","-ExclusionPath","-DisableRealtimeMonitoring")
+
+
+// ---------------------------------------------------------------------
+// 4) AS-REP ROASTING  (T1558.004)  -- 4768 sin preautenticacion
+// ---------------------------------------------------------------------
+// -- Microsoft Sentinel (SecurityEvent) --
+SecurityEvent
+| where EventID == 4768
+| where PreAuthType == "0"                         // 0 = sin preauth -> roasteable
+| where TargetUserName !endswith "$"
+| project TimeGenerated, TargetUserName, TicketEncryptionType, IpAddress, Computer
+| sort by TimeGenerated desc
+
+
+// ---------------------------------------------------------------------
+// 5) LOLBIN DE DESCARGA  (T1105)  -- certutil/bitsadmin/mshta + URL
+// ---------------------------------------------------------------------
+// -- Defender XDR (Advanced Hunting) --
+DeviceProcessEvents
+| where (FileName =~ "certutil.exe"  and ProcessCommandLine has_any ("-urlcache","/urlcache","-verifyctl"))
+     or (FileName =~ "bitsadmin.exe" and ProcessCommandLine has "/transfer")
+     or (FileName =~ "mshta.exe"     and ProcessCommandLine has_any ("http://","https://"))
+| project Timestamp, DeviceName, AccountName, FileName, ProcessCommandLine
+| sort by Timestamp desc

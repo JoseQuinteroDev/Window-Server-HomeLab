@@ -29,7 +29,7 @@ La idea que lo unifica todo: **UN laboratorio** (Hyper-V, aislado) que, corriend
 | 3 | **WIN11 Pro** (instalación desatendida) unido al dominio | ✅ |
 | 4 | GPO + Auditoría (4688/4624-25/4769/4768, PowerShell logging) | ✅ |
 | 1b | Telemetría: **Sysmon en WIN11** ✅ · Microsoft Sentinel / Defender XDR (KQL) ⏳ |
-| 2b | Los 7 entregables (1 repo cada uno) | ⏳ |
+| 2b | Los 7 entregables → **Proyecto 3 Detection Engineering** ✅ ([projects/03](projects/03-detection-engineering/)) · resto ⏳ |
 
 Evidencia de validación: [`evidence/lab-validation.md`](evidence/lab-validation.md).
 

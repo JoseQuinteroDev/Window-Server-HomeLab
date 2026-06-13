@@ -1,0 +1,41 @@
+title: Posible Kerberoasting - solicitud de TGS a cuenta de servicio
+id: 7c2a1e10-3b44-4f0a-9d21-0a1b2c3d4e01
+status: experimental
+description: |
+  Detecta Kerberoasting (peticion de TGS, evento 4769) por dos vias complementarias:
+   (a) HONEYPOT: cualquier 4769 hacia 'svc_sql', una cuenta de servicio SEÑUELO sin uso
+       legitimo -> cualquier peticion de su ticket es sospechosa (independiente del cifrado).
+   (b) CLASICO: 4769 con cifrado RC4 (0x17) hacia cuentas de usuario con SPN.
+  Nota: Windows Server 2025 emite AES (0x12) por defecto aunque la cuenta soporte RC4, por lo
+  que la deteccion por solo-RC4 ya NO basta; el patron honeypot es robusto y enc-agnostico.
+references:
+  - https://attack.mitre.org/techniques/T1558/003/
+author: Jose Quintero
+date: 2026-06-14
+logsource:
+  product: windows
+  service: security
+detection:
+  selection_honeypot:
+    EventID: 4769
+    ServiceName: 'svc_sql'            # cuenta señuelo (canary) -> cualquier TGS = alerta
+  selection_rc4:
+    EventID: 4769
+    TicketEncryptionType: '0x17'      # RC4 -> crackeable offline
+  filter_machine:
+    ServiceName|endswith: '$'
+  filter_krbtgt:
+    ServiceName: 'krbtgt'
+  condition: selection_honeypot or (selection_rc4 and not (filter_machine or filter_krbtgt))
+fields:
+  - ServiceName
+  - TicketEncryptionType
+  - TargetUserName
+  - IpAddress
+falsepositives:
+  - (honeypot) ninguno esperado: svc_sql no presta servicio real
+  - (rc4) aplicaciones legacy que aun negocian RC4
+level: high
+tags:
+  - attack.credential_access
+  - attack.t1558.003

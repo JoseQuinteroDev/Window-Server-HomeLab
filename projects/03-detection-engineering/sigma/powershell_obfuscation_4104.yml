@@ -1,0 +1,44 @@
+title: PowerShell sospechoso - descarga/ofuscacion (Script Block Logging)
+id: 7c2a1e10-3b44-4f0a-9d21-0a1b2c3d4e02
+status: experimental
+description: |
+  Detecta bloques de script de PowerShell (evento 4104) que contienen indicadores de
+  ofuscacion o de "download cradle" tipicos de loaders (FromBase64String, IEX,
+  DownloadString, Net.WebClient, -EncodedCommand).
+references:
+  - https://attack.mitre.org/techniques/T1059/001/
+  - https://attack.mitre.org/techniques/T1027/
+author: Jose Quintero
+date: 2026-06-14
+logsource:
+  product: windows
+  service: powershell
+  definition: 'Requiere Script Block Logging (4104) habilitado por GPO'
+detection:
+  selection:
+    EventID: 4104
+  keywords:
+    ScriptBlockText|contains:
+      - 'FromBase64String'
+      - 'Invoke-Expression'
+      - 'IEX '
+      - 'DownloadString'
+      - 'DownloadData'
+      - 'Net.WebClient'
+      - 'Invoke-WebRequest'
+      - '-enc'
+      - '-EncodedCommand'
+      - 'IWR '
+  condition: selection and keywords
+fields:
+  - ScriptBlockText
+  - Computer
+  - UserId
+falsepositives:
+  - Scripts de administracion legitimos que descargan modulos
+level: high
+tags:
+  - attack.execution
+  - attack.t1059.001
+  - attack.defense_evasion
+  - attack.t1027
