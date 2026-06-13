@@ -1,0 +1,20 @@
+# Binarios grandes — nunca al repo
+*.iso
+*.vhd
+*.vhdx
+*.wim
+*.esd
+
+# Scratch / temporales
+_*
+*.tmp
+*.log
+
+# Basura de Windows
+Thumbs.db
+desktop.ini
+$RECYCLE.BIN/
+
+# IDE
+.idea/
+.vs/
