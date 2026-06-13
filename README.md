@@ -28,7 +28,7 @@ La idea que lo unifica todo: **UN laboratorio** (Hyper-V, aislado) que, corriend
 | 2 | Estructura AD (OUs, usuarios, grupos) + **señuelos** Kerberoasting/AS-REP | ✅ |
 | 3 | **WIN11 Pro** (instalación desatendida) unido al dominio | ✅ |
 | 4 | GPO + Auditoría (4688/4624-25/4769/4768, PowerShell logging) | ✅ |
-| 1b | Telemetría: **Sysmon en WIN11** ✅ · Microsoft Sentinel / Defender XDR (KQL) ⏳ |
+| 1b | Telemetría: **Sysmon en WIN11** ✅ · **Sentinel** kit de despliegue listo ([sentinel/](sentinel/)) ⏳ pendiente de cuenta Azure |
 | 2b | Los 7 entregables → **Proyecto 3 Detection Engineering** ✅ ([projects/03](projects/03-detection-engineering/)) · resto ⏳ |
 
 Evidencia de validación: [`evidence/lab-validation.md`](evidence/lab-validation.md).
