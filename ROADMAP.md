@@ -111,7 +111,7 @@ Lo que pediste: manejar Windows muy bien antes que nada. Bloques de práctica co
 - **Aquí practicas lo que pediste de Windows Server:** AD, **GPO/políticas**, **servidores DNS**, unidades organizativas, usuarios de dominio.
 
 ### FASE 1 — Telemetría + SIEM *(EDR/XDR → Sysmon → SIEM → MITRE)*
-- **Sysmon** desplegado y afinado en `WIN11` (partimos de tu config del repo de Threat Hunting).
+- [x] **Sysmon** desplegado en `WIN11` (config curada del repo Threat Hunting) — Event ID 1 validado con hash + linaje (2026-06-13).
 - **Tenant E5 de desarrollador** (Microsoft 365 Developer Program) → **Defender XDR + Sentinel** gratis.
 - Onboarding del endpoint a Defender XDR; conector de logs a Sentinel.
 - Primera consulta **KQL** de validación end-to-end (genero evento → lo veo en Sentinel).

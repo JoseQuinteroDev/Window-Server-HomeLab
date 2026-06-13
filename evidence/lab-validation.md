@@ -76,6 +76,20 @@ Evento 4104 (Microsoft-Windows-PowerShell/Operational): scriptblock con el marca
 
 > Montado de forma scriptada: `lab-tools/Configure-AuditGPO.ps1` (políticas de registro + `audit.csv` en SYSVOL + registro del CSE de auditoría en `gPCMachineExtensionNames`).
 
+## Telemetría — Sysmon en WIN11
+
+Instalado con `lab-tools/Deploy-Sysmon.ps1` (config de alta señal). Servicio `Sysmon64` + driver `SysmonDrv` Running. Prueba end-to-end (Event ID 1, Process Create):
+
+```text
+Image             : ...\powershell.exe
+CommandLine       : ...'SOC-LAB-SYSMON-MARKER Invoke-Expression Net.WebClient DownloadString'
+User              : WIN11\labadmin
+Hashes            : SHA256=0FF6F2C9...317E8C46     <- enriquecimiento de hash
+ParentImage       : ...\powershell.exe             <- linaje de proceso
+```
+
+> La regla *include* de la config cazó la command line tipo loader (Invoke-Expression / Net.WebClient / DownloadString) — el mismo TTP del incidente real de origen (caso `Threat Hunting on my own PC`).
+
 ## Qué demuestra esta evidencia
 
 - Un **dominio Active Directory funcional y aislado** (AD DS + DNS) montado de forma **reproducible y scriptada**.

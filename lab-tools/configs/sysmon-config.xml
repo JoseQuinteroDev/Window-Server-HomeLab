@@ -1,0 +1,98 @@
+<!--
+  Sysmon config — orientada a la caza del loader PowerShell del incidente.
+  Autor: José Quintero (Blue Team / DFIR)
+  Filosofía: incluir poco y bueno (alta señal) en lugar de registrarlo todo.
+  Despliegue:  sysmon64.exe -accepteula -i sysmon-config.xml
+  Actualizar:  sysmon64.exe -c sysmon-config.xml
+-->
+<Sysmon schemaversion="4.90">
+  <HashAlgorithms>SHA256</HashAlgorithms>
+  <CheckRevocation>false</CheckRevocation>
+
+  <EventFiltering>
+
+    <!-- ════════ Event ID 1: Creación de procesos ════════ -->
+    <RuleGroup name="Proc - interpretes y LOLBins sospechosos" groupRelation="or">
+      <ProcessCreate onmatch="include">
+        <!-- Línea de comando con indicadores de loader / ofuscación (T1027, T1059.001) -->
+        <CommandLine condition="contains any">-enc;-EncodedCommand;-w hidden;-windowstyle hidden;-ep bypass;-executionpolicy bypass;FromBase64String;Invoke-Expression;IEX ;Invoke-WebRequest;iwr ;DownloadString;Net.WebClient;--fromloader</CommandLine>
+        <!-- Manipulación de Defender (T1562.001) -->
+        <CommandLine condition="contains">Add-MpPreference</CommandLine>
+        <!-- Creación de tareas por línea de comandos (T1053.005) -->
+        <Image condition="end with">\schtasks.exe</Image>
+        <!-- Intérpretes de scripting frecuentemente abusados -->
+        <Image condition="end with">\mshta.exe</Image>
+        <Image condition="end with">\wscript.exe</Image>
+        <Image condition="end with">\cscript.exe</Image>
+      </ProcessCreate>
+    </RuleGroup>
+
+    <!-- PowerShell/cmd lanzados por un proceso de tarea programada (taskeng/svchost) -->
+    <RuleGroup name="Proc - shell con padre anomalo" groupRelation="and">
+      <ProcessCreate onmatch="include">
+        <ParentImage condition="end with">\svchost.exe</ParentImage>
+        <Image condition="end with">\powershell.exe</Image>
+      </ProcessCreate>
+    </RuleGroup>
+
+    <!-- ════════ Event ID 3: Conexiones de red ════════ -->
+    <!-- Intérpretes que abren red = posible C2 / descarga (T1071.001, T1105) -->
+    <RuleGroup name="Net - intérpretes con salida a red" groupRelation="or">
+      <NetworkConnect onmatch="include">
+        <Image condition="end with">\powershell.exe</Image>
+        <Image condition="end with">\cmd.exe</Image>
+        <Image condition="end with">\mshta.exe</Image>
+        <Image condition="end with">\wscript.exe</Image>
+        <Image condition="end with">\cscript.exe</Image>
+      </NetworkConnect>
+    </RuleGroup>
+
+    <!-- ════════ Event ID 22: Consultas DNS ════════ -->
+    <RuleGroup name="DNS - intérpretes resolviendo dominios" groupRelation="or">
+      <DnsQuery onmatch="include">
+        <Image condition="end with">\powershell.exe</Image>
+        <Image condition="end with">\cmd.exe</Image>
+        <Image condition="end with">\mshta.exe</Image>
+      </DnsQuery>
+    </RuleGroup>
+
+    <!-- ════════ Event ID 11: Creación de archivos ════════ -->
+    <RuleGroup name="File - drops en zonas de usuario y tareas" groupRelation="or">
+      <FileCreate onmatch="include">
+        <!-- Scripts/binarios soltados en el perfil (como los scriptNNNNN.ps1) -->
+        <TargetFilename condition="contains all">\AppData\;.ps1</TargetFilename>
+        <TargetFilename condition="contains all">\AppData\;.exe</TargetFilename>
+        <TargetFilename condition="contains all">\Temp\;.ps1</TargetFilename>
+        <!-- Creación de tareas programadas en disco (T1053.005) -->
+        <TargetFilename condition="contains">\System32\Tasks\</TargetFilename>
+      </FileCreate>
+    </RuleGroup>
+
+    <!-- ════════ Event ID 12/13: Registro ════════ -->
+    <RuleGroup name="Reg - autoarranque y exclusiones AV" groupRelation="or">
+      <RegistryEvent onmatch="include">
+        <!-- Persistencia por claves Run (T1547.001) -->
+        <TargetObject condition="contains">\CurrentVersion\Run</TargetObject>
+        <!-- Exclusiones de Defender escritas en registro (T1562.001) -->
+        <TargetObject condition="contains">Windows Defender\Exclusions</TargetObject>
+        <!-- Desactivación de componentes de Defender -->
+        <TargetObject condition="contains">Windows Defender\Real-Time Protection</TargetObject>
+      </RegistryEvent>
+    </RuleGroup>
+
+    <!-- ════════ Event ID 8 / 10: inyección / acceso a lsass (alta señal) ════════ -->
+    <RuleGroup name="Cred - acceso a lsass" groupRelation="and">
+      <ProcessAccess onmatch="include">
+        <TargetImage condition="end with">\lsass.exe</TargetImage>
+      </ProcessAccess>
+    </RuleGroup>
+
+    <!-- Reducir ruido: ignorar tráfico de red del propio Sysmon/SVC de Windows update -->
+    <RuleGroup name="" groupRelation="or">
+      <NetworkConnect onmatch="exclude">
+        <Image condition="end with">\OneDrive.exe</Image>
+      </NetworkConnect>
+    </RuleGroup>
+
+  </EventFiltering>
+</Sysmon>

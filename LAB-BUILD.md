@@ -252,8 +252,9 @@ Config. equipo → Plantillas administrativas → Sistema → Auditar creación 
 - Banner de inicio de sesión legal.
 - (Más adelante) restringir NTLM, firmado SMB, LSA Protection.
 
-**4.5 Desplegar Sysmon por GPO** (lo afinamos en la fase de telemetría):
-- GPO con tarea programada/script de inicio que instala Sysmon con la config curada (partimos de la de tu repo `Threat Hunting on my own PC/detections/sysmon/`).
+**4.5 Sysmon en WIN11**
+- [x] **Desplegado en WIN11 (2026-06-13)** con la config curada (`lab-tools/configs/sysmon-config.xml`, de alta señal, orientada al loader del incidente) usando [`lab-tools/Deploy-Sysmon.ps1`](lab-tools/Deploy-Sysmon.ps1) por PowerShell Direct. **Validado:** Sysmon **Event ID 1** captura procesos con hash SHA256 + linaje padre-hijo + command line.
+- ⏳ Pendiente (escalado): auto-despliegue por **GPO** (script de inicio) para que se instale solo en todos los endpoints.
 
 Forzar y verificar:
 ```powershell
