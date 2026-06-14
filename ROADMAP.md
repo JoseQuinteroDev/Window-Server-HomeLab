@@ -196,8 +196,8 @@ Detalle en la sección 5. Orden recomendado: **3 → 2 → 1 → 4 → 5 → 6 �
 **Fase 1**
 - [x] Sysmon en `WIN11` (config afinada) — 2026-06-13
 - [x] **SIEM decidido: Wazuh** + kit en `wazuh/` (reglas, ingesta, runbook) — 2026-06-14
-- [ ] Levantar VM `WAZUH` (Ubuntu + Wazuh AIO) + agentes en DC01/WIN11
-- [ ] Cargar reglas + **alerta real** (`Invoke-DetectionTests.ps1`)
+- [x] VM `WAZUH` (Ubuntu + Wazuh 4.13.1 AIO) + agente en DC01 — 2026-06-14 *(WIN11 pendiente)*
+- [x] Reglas cargadas + **alerta real**: Kerberoasting (regla 100110, T1558.003) — 2026-06-14
 - [ ] *(opcional)* Sentinel/Defender XDR cloud (kit en `sentinel/`)
 
 **Fase 2 — los 7 proyectos**

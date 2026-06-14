@@ -1,0 +1,54 @@
+#cloud-config
+# ============================================================================
+#  Ubuntu 24.04 autoinstall (Subiquity) para la VM WAZUH del lab corp.local
+#  Entrega: ISO "seed" NoCloud (etiqueta CIDATA) con user-data + meta-data.
+#  Red DUAL durante la instalacion:
+#    - lab0 (NIC LAB-Net, MAC ...0a:0a:20) -> IP final estatica 10.10.10.20, SIN gateway (aislada)
+#    - wan0 (NIC Default Switch, MAC ...0a:0a:99) -> DHCP/NAT, internet SOLO para instalar (se quita despues)
+#  Usuario: socadmin / Lab.Wazuh.2026!
+# ============================================================================
+autoinstall:
+  version: 1
+  shutdown: poweroff
+  locale: en_US.UTF-8
+  keyboard:
+    layout: es
+  refresh-installer:
+    update: no
+  ssh:
+    install-server: true
+    allow-pw: true
+    authorized-keys:
+      - "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAINBHuIK2uwvJugotwngCqahOcCkchZNFWYj91UYVXavl wazuh-lab"
+  identity:
+    realname: SOC Admin
+    hostname: wazuh
+    username: socadmin
+    # Hash SHA-512 crypt del password. Generar y pegar:  openssl passwd -6 'TuPassword'
+    password: "REEMPLAZA_POR_HASH_SHA512_CRYPT"
+  network:
+    version: 2
+    ethernets:
+      lab0:
+        match:
+          macaddress: "00:15:5d:0a:0a:20"
+        set-name: lab0
+        dhcp4: false
+        addresses: [10.10.10.20/24]
+        nameservers:
+          addresses: [10.10.10.10]
+      wan0:
+        match:
+          macaddress: "00:15:5d:0a:0a:99"
+        set-name: wan0
+        dhcp4: true
+  storage:
+    layout:
+      name: direct
+  packages:
+    - curl
+    - gnupg2
+  user-data:
+    disable_root: false
+  late-commands:
+    - curtin in-target --target=/target -- systemctl enable ssh

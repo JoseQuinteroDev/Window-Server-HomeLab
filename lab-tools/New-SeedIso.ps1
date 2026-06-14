@@ -1,0 +1,55 @@
+<#
+.SYNOPSIS  Empaqueta una carpeta (user-data + meta-data) en un ISO "seed" NoCloud para cloud-init.
+.DESCRIPTION
+    Igual que New-AutounattendIso.ps1 pero con etiqueta de volumen CIDATA (la que busca el datasource
+    NoCloud de cloud-init). Usa IMAPI2 (COM nativo, sin oscdimg) + helper C# para volcar el IStream.
+    Subiquity (instalador de Ubuntu) detecta el seed y arranca el autoinstall sin interaccion.
+.PARAMETER SourceDir  Carpeta cuyo contenido va a la raiz del ISO (debe contener user-data y meta-data).
+.PARAMETER OutIso     Ruta del ISO de salida.
+.EXAMPLE  .\New-SeedIso.ps1 -SourceDir .\configs\wazuh-autoinstall -OutIso C:\Lab\ISOs\wazuh-seed.iso
+.NOTES    Lab SOC Blue Team.
+#>
+param(
+    [Parameter(Mandatory)][string]$SourceDir,
+    [Parameter(Mandatory)][string]$OutIso
+)
+$ErrorActionPreference = 'Stop'
+foreach ($f in 'user-data','meta-data') {
+    if (-not (Test-Path (Join-Path $SourceDir $f))) { throw "Falta '$f' en $SourceDir" }
+}
+if (Test-Path $OutIso) { Remove-Item $OutIso -Force }
+
+# Helper C# para copiar el IStream del resultado IMAPI2 a un fichero (via Marshal, sin /unsafe)
+if (-not ('ISOFileWriter' -as [type])) {
+    $cs = @'
+using System;
+using System.IO;
+using System.Runtime.InteropServices;
+using System.Runtime.InteropServices.ComTypes;
+public class ISOFileWriter {
+    public static void Create(string Path, object Stream, int BlockSize, int TotalBlocks) {
+        IStream i = Stream as IStream;
+        FileStream o = File.OpenWrite(Path);
+        byte[] buf = new byte[BlockSize];
+        IntPtr pcb = Marshal.AllocHGlobal(4);
+        try {
+            while (TotalBlocks-- > 0) {
+                i.Read(buf, BlockSize, pcb);
+                int read = Marshal.ReadInt32(pcb);
+                o.Write(buf, 0, read);
+            }
+            o.Flush();
+        } finally { o.Close(); Marshal.FreeHGlobal(pcb); }
+    }
+}
+'@
+    Add-Type -TypeDefinition $cs
+}
+
+$fsi = New-Object -ComObject IMAPI2FS.MsftFileSystemImage
+$fsi.FileSystemsToCreate = 3        # ISO9660 (1) + Joliet (2)
+$fsi.VolumeName = 'CIDATA'          # <-- etiqueta que busca cloud-init NoCloud
+$fsi.Root.AddTree($SourceDir, $false)   # $false => el CONTENIDO va a la raiz del ISO
+$res = $fsi.CreateResultImage()
+[ISOFileWriter]::Create($OutIso, $res.ImageStream, $res.BlockSize, $res.TotalBlocks)
+Write-Output ("Seed ISO creado: {0} ({1:N0} KB)" -f $OutIso, ((Get-Item $OutIso).Length/1KB))
