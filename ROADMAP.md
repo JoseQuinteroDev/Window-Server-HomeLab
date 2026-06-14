@@ -112,9 +112,9 @@ Lo que pediste: manejar Windows muy bien antes que nada. Bloques de práctica co
 
 ### FASE 1 — Telemetría + SIEM *(EDR/XDR → Sysmon → SIEM → MITRE)*
 - [x] **Sysmon** desplegado en `WIN11` (config curada del repo Threat Hunting) — Event ID 1 validado con hash + linaje (2026-06-13).
-- **Tenant E5 de desarrollador** (Microsoft 365 Developer Program) → **Defender XDR + Sentinel** gratis.
-- Onboarding del endpoint a Defender XDR; conector de logs a Sentinel.
-- Primera consulta **KQL** de validación end-to-end (genero evento → lo veo en Sentinel).
+- ✅ **SIEM = Wazuh** (decidido 2026-06-14): self-hosted, gratis, **dentro de `LAB-Net` aislado**. Kit en [`wazuh/`](wazuh/) (arquitectura + 5 detecciones portadas + ingesta + runbook). Pendiente: levantar la VM `WAZUH` (Ubuntu + Wazuh AIO) y conectar agentes en DC01/WIN11.
+- *(Opcional/cloud)* Tenant E5 dev → **Defender XDR + Sentinel** (KQL); kit en [`sentinel/`](sentinel/). Requiere Azure sub + tarjeta — aparcado a favor de Wazuh.
+- Validación end-to-end: disparar `Invoke-DetectionTests.ps1` y ver la **alerta real** en el dashboard de Wazuh.
 
 ### FASE 2 — Los 7 proyectos (orden pedagógico)
 Detalle en la sección 5. Orden recomendado: **3 → 2 → 1 → 4 → 5 → 6 → 7** (detección primero porque todo lo demás la necesita; métricas al final porque agregan todo lo anterior).
@@ -194,10 +194,11 @@ Detalle en la sección 5. Orden recomendado: **3 → 2 → 1 → 4 → 5 → 6 �
 - [ ] 0.B `KALI` atacante (diferido: tras liberar más disco / SSD externo)
 
 **Fase 1**
-- [ ] Sysmon en `WIN11` (config afinada)
-- [ ] Tenant E5 dev → Defender XDR + Sentinel
-- [ ] Onboarding endpoint + conector de logs
-- [ ] KQL de validación end-to-end
+- [x] Sysmon en `WIN11` (config afinada) — 2026-06-13
+- [x] **SIEM decidido: Wazuh** + kit en `wazuh/` (reglas, ingesta, runbook) — 2026-06-14
+- [ ] Levantar VM `WAZUH` (Ubuntu + Wazuh AIO) + agentes en DC01/WIN11
+- [ ] Cargar reglas + **alerta real** (`Invoke-DetectionTests.ps1`)
+- [ ] *(opcional)* Sentinel/Defender XDR cloud (kit en `sentinel/`)
 
 **Fase 2 — los 7 proyectos**
 - [x] Proyecto 3 — Detection Engineering *(5 detecciones Sigma+KQL, 4 validadas por simulación; AS-REP a falta de KALI — 2026-06-14)*

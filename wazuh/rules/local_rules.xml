@@ -1,0 +1,126 @@
+<!--
+  ============================================================================
+   Wazuh — local_rules.xml  |  Lab: corp.local  |  Autor: Jose Quintero
+   Detecciones del Proyecto 3 (Detection Engineering) portadas a reglas Wazuh.
+   Destino en el manager:  /var/ossec/etc/rules/local_rules.xml   (restart manager)
+   Rango de IDs de usuario: 100000+   |   level >= 10 => alerta
+   Campos: el decoder windows_eventchannel expone win.system.* y win.eventdata.*
+           (confirmar nombres exactos contra el primer evento real - ver runbook).
+  ============================================================================
+-->
+<group name="local,soc_lab,attack,">
+
+  <!-- ====================================================================
+       1) KERBEROASTING  (T1558.003)  -- Security 4769 (TGS solicitado)
+       ==================================================================== -->
+
+  <!-- 1a) Honeypot enc-agnostico: CUALQUIER TGS hacia la cuenta senuelo svc_sql.
+           En Server 2025 el cifrado es AES (0x12), no RC4 -> el honeypot es la
+           senal fuerte: nadie legitimo pide tickets de svc_sql. -->
+  <rule id="100110" level="12">
+    <if_group>windows</if_group>
+    <field name="win.system.eventID">^4769$</field>
+    <field name="win.eventdata.serviceName">^svc_sql$</field>
+    <description>Kerberoasting (honeypot): TGS solicitado para la cuenta senuelo svc_sql</description>
+    <mitre>
+      <id>T1558.003</id>
+    </mitre>
+    <group>kerberoasting,credential_access,honeypot,</group>
+  </rule>
+
+  <!-- 1b) Clasico: TGS con cifrado RC4 (0x17), excluyendo cuentas de equipo ($) -->
+  <rule id="100111" level="10">
+    <if_group>windows</if_group>
+    <field name="win.system.eventID">^4769$</field>
+    <field name="win.eventdata.ticketEncryptionType">^0x17$</field>
+    <field name="win.eventdata.serviceName" negate="yes">\$$</field>
+    <description>Kerberoasting: TGS con cifrado debil RC4 (0x17) - posible roasting</description>
+    <mitre>
+      <id>T1558.003</id>
+    </mitre>
+    <group>kerberoasting,credential_access,</group>
+  </rule>
+
+  <!-- ====================================================================
+       2) POWERSHELL OFUSCADO  (T1059.001 / T1027)
+          PowerShell/Operational 4104 (Script Block Logging)
+       ==================================================================== -->
+  <rule id="100120" level="12">
+    <if_group>windows</if_group>
+    <field name="win.system.eventID">^4104$</field>
+    <field name="win.eventdata.scriptBlockText" type="pcre2">(?i)(FromBase64String|Invoke-Expression|\bIEX\b|DownloadString|DownloadData|Net\.WebClient|Invoke-WebRequest|-enc\b|-EncodedCommand)</field>
+    <description>PowerShell ofuscado/sospechoso en Script Block (4104): $(win.eventdata.scriptBlockText)</description>
+    <mitre>
+      <id>T1059.001</id>
+      <id>T1027</id>
+    </mitre>
+    <group>powershell,execution,obfuscation,</group>
+  </rule>
+
+  <!-- ====================================================================
+       3) MANIPULACION DE DEFENDER  (T1562.001)
+          Linea de comandos via Sysmon EID 1 o Security 4688
+          (ambos exponen win.eventdata.commandLine)
+       ==================================================================== -->
+  <rule id="100130" level="12">
+    <if_group>windows</if_group>
+    <field name="win.eventdata.commandLine" type="pcre2">(?i)(Add-MpPreference|Set-MpPreference|-ExclusionPath|-ExclusionProcess|-ExclusionExtension|-DisableRealtimeMonitoring|DisableBehaviorMonitoring)</field>
+    <description>Manipulacion de Microsoft Defender via linea de comandos (exclusiones / RTP off)</description>
+    <mitre>
+      <id>T1562.001</id>
+    </mitre>
+    <group>defense_evasion,defender_tamper,</group>
+  </rule>
+
+  <!-- ====================================================================
+       4) AS-REP ROASTING  (T1558.004)  -- Security 4768 sin preautenticacion
+       ==================================================================== -->
+  <rule id="100140" level="12">
+    <if_group>windows</if_group>
+    <field name="win.system.eventID">^4768$</field>
+    <field name="win.eventdata.preAuthType">^0$</field>
+    <field name="win.eventdata.targetUserName" negate="yes">\$$</field>
+    <description>AS-REP Roasting: TGT solicitado sin preautenticacion (PreAuthType 0)</description>
+    <mitre>
+      <id>T1558.004</id>
+    </mitre>
+    <group>asrep_roasting,credential_access,</group>
+  </rule>
+
+  <!-- ====================================================================
+       5) LOLBIN DE DESCARGA  (T1105)  -- Sysmon EID 1 (image + commandLine)
+       ==================================================================== -->
+  <rule id="100150" level="10">
+    <if_group>windows</if_group>
+    <field name="win.eventdata.image" type="pcre2">(?i)\\certutil\.exe$</field>
+    <field name="win.eventdata.commandLine" type="pcre2">(?i)(-urlcache|/urlcache|-verifyctl|-split)</field>
+    <description>LOLBin: certutil descargando/cacheando contenido de una URL</description>
+    <mitre>
+      <id>T1105</id>
+    </mitre>
+    <group>lolbin,command_and_control,</group>
+  </rule>
+
+  <rule id="100151" level="10">
+    <if_group>windows</if_group>
+    <field name="win.eventdata.image" type="pcre2">(?i)\\bitsadmin\.exe$</field>
+    <field name="win.eventdata.commandLine" type="pcre2">(?i)/transfer</field>
+    <description>LOLBin: bitsadmin /transfer (descarga por BITS)</description>
+    <mitre>
+      <id>T1105</id>
+    </mitre>
+    <group>lolbin,command_and_control,</group>
+  </rule>
+
+  <rule id="100152" level="10">
+    <if_group>windows</if_group>
+    <field name="win.eventdata.image" type="pcre2">(?i)\\mshta\.exe$</field>
+    <field name="win.eventdata.commandLine" type="pcre2">(?i)(http://|https://)</field>
+    <description>LOLBin: mshta ejecutando una URL remota</description>
+    <mitre>
+      <id>T1105</id>
+    </mitre>
+    <group>lolbin,command_and_control,</group>
+  </rule>
+
+</group>
