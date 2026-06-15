@@ -20,7 +20,7 @@ El ciclo aplicado:
 3. **IMPROVE** corrige reglas/procesos sobre los gaps observados.
 4. **RE-EMULAR** relanza la tecnica para demostrar que la mejora funciona.
 
-**Que se midio:** cobertura por tecnica ATT&CK (detectado / gap / deteccion lista pero sin emulacion), profundidad de la deteccion (sensor unico vs. campo comun vs. defensa en profundidad) y respuesta automatica (casos abiertos por el Active Response). El alcance: **8 tecnicas** en 6 tacticas, **1 ciclo de mejora demostrado en vivo** y **1 ciclo de mejora disenado** pendiente de autorizacion.
+**Que se midio:** cobertura por tecnica ATT&CK (detectado / gap / deteccion lista pero sin emulacion), profundidad de la deteccion (sensor unico vs. campo comun vs. defensa en profundidad) y respuesta automatica (casos abiertos por el Active Response). El alcance: **8 tecnicas** en 5 tacticas y **2 ciclos de mejora demostrados en vivo**.
 
 ## 1. Emulacion (RED)
 
@@ -35,7 +35,7 @@ Tecnicas emuladas de forma controlada/benigna sobre el lab:
 | Defense Evasion | **T1562.001** Impair Defenses | `Add-MpPreference -ExclusionPath` (revertido) | regla **100130** (n12) | DETECTADO |
 | Command and Control | **T1105** Ingress Tool Transfer | `certutil -urlcache -f http://127.0.0.1/...` | regla **100150** (n10) + Defender **100160/100161** | DETECTADO (defensa en profundidad: regla propia Y EDR) |
 | Impact | **T1486** Data Encrypted for Impact | "ransomware" simulado: 6 ficheros dummy -> `*.locked` + nota (**sin cifrado real**) | NINGUNA | **GAP** (no detectado) |
-| Impact | **T1490** Inhibit System Recovery | precursor; **no emulado todavia** | regla **100180** (n13) AUTORADA, pendiente de despliegue | MEJORA DISENADA |
+| Impact | **T1490** Inhibit System Recovery | borrado de Shadow Copies re-emulado (benigno, `rem`) en WIN11 | regla **100180** (n13) + caso AR | DETECTADO (validado en vivo) |
 
 Todas las acciones potencialmente destructivas se ejecutaron de forma inerte o reversible: el `-ExclusionPath` de Defender se **revirtio**, el "ransomware" **solo renombro ficheros dummy** (sin cifrado real) y el `certutil` apunto a `127.0.0.1` (sin descarga externa).
 
@@ -64,18 +64,18 @@ Ciclo Purple cerrado y **validado en vivo**, de extremo a extremo:
 - **RE-EMULAR.** Se relanzo `certutil`: la regla **100150 SI disparo** (validado multiples veces). Ademas Defender aporto deteccion **independiente** (100160/161).
 - **Leccion (detection engineering).** Una regla atada a un **unico sensor / unico campo** es un punto ciego silencioso. Casar el **campo comun** (`commandLine`) da cobertura **agnostica del sensor** y **resistente a tamper** (si el atacante manipula Sysmon, Security 4688 sigue alimentando la regla).
 
-### 4.2 DISENADA: regla 100180 (T1490 Inhibit System Recovery) para el gap de Impacto
+### 4.2 VALIDADA EN VIVO: regla 100180 (T1490 Inhibit System Recovery) para el gap de Impacto
 
 El ejercicio IR (P4) confirmo que la etapa de **Impacto no disparo nada** (gap de la seccion 3). Dado que ver el cifrado directo (T1486) exige FIM de frecuencia, la mejora ataca el **precursor detectable**:
 
 - **Que detecta.** La regla **100180** (nivel **13**) caza por `commandLine` el **borrado de Shadow Copies / backups** — `vssadmin`, `wmic shadowcopy`, `wbadmin`, `bcdedit` — el paso que **casi todo ransomware ejecuta justo antes de cifrar** para impedir la recuperacion.
 - **Por que el precursor y no el cifrado.** El cifrado/renombrado masivo es invisible sin FIM de frecuencia; el borrado de copias de seguridad, en cambio, es un **proceso con linea de comando muy caracteristica**, encaja en el mismo patron `commandLine` ya probado y da una alerta **temprana, de alto valor** (nivel 13) antes de que el dano sea irreversible.
-- **Estado.** **Autorada y en el repo** (`wazuh/rules/local_rules.xml`). Su **despliegue + validacion en el manager queda PENDIENTE de autorizacion explicita del usuario**, porque modifica infraestructura del SIEM y el clasificador lo bloquea sin OK explicito — el mismo estado por el que paso el Active Response antes de autorizarse.
+- **Estado.** **Desplegada y VALIDADA en vivo (2026-06-15).** Tras autorizar el cambio en el manager, se desplego la regla (config `wazuh-analysisd -t` OK, manager `active`) y se re-emulo el precursor de forma benigna -> **100180 disparo a nivel 13** y el Active Response abrio el caso `CASE-20260615-202434-100180`.
 
 ## 5. Re-emulacion y resultado
 
 - **Mejora #1 (certutil) — RE-EMULADA y VALIDADA.** Tras el fix `image`->`commandLine`, el relanzamiento de `certutil -urlcache` **disparo la regla 100150** de forma consistente (multiples ejecuciones), con deteccion **redundante** de Defender (100160/161). El punto ciego paso de **true negative** a **deteccion en profundidad**. Mejora **demostrada**.
-- **Mejora #2 (100180 / T1490) — RE-EMULACION PLANIFICADA.** Una vez autorizado el despliegue en el manager, el plan de validacion es: emular de forma benigna el borrado de Shadow Copies (`vssadmin delete shadows` u equivalente inerte) y **confirmar que 100180 dispara a nivel 13** y abre caso via Active Response. Hasta entonces el estado es **disenada/armada, no validada** — y asi se reporta, sin contarla como cobertura efectiva.
+- **Mejora #2 (100180 / T1490) — RE-EMULADA y VALIDADA.** Autorizado el despliegue, se re-emulo el borrado de Shadow Copies de forma **benigna** (`cmd /c "rem [SIM-T1490] vssadmin delete shadows /all /quiet"`; el `rem` es un comentario, no ejecuta nada): la regla **100180 disparo a nivel 13** (sobre la `commandLine` del proceso `cmd.exe` con el IOC, via Security 4688) y el Active Response abrio el caso `CASE-20260615-202434-100180`. **El gap de Impacto del Proyecto 4 queda cerrado con evidencia.**
 
 ## Conclusiones
 
@@ -84,5 +84,5 @@ El ejercicio IR (P4) confirmo que la etapa de **Impacto no disparo nada** (gap d
   - **Casar el campo comun** (`commandLine`), no el de un solo sensor: cobertura agnostica del sensor y resistente a tamper.
   - **Detectar por identidad/honeypot**, no por cifrado: el honeypot `svc_sql` (100110) sobrevive al "mito del RC4" que evade la firma RC4 (100111) en WS2025/AES.
   - **Atacar el precursor** cuando el evento final es invisible: T1490 (borrado de copias) es la palanca detectable del Impacto T1486.
-  - **Armada != validada:** AS-REP (100140) y la regla 100180 estan listas pero pendientes de disparo/despliegue real; se contabilizan como tales.
-- **Siguiente iteracion:** (1) autorizar el despliegue y **re-emular 100180** para cerrar el gap de Impacto; (2) **emular AS-REP Roasting real** (Rubeus/Kali) para validar 100140; (3) evaluar **FIM de frecuencia** como deteccion complementaria del cifrado masivo (T1486) directo.
+  - **Armada != validada:** queda AS-REP (100140) lista pero sin emulacion real (falta Rubeus/Kali); se contabiliza como tal. La regla 100180 ya paso de **disenada a validada en vivo** en esta iteracion.
+- **Siguiente iteracion:** (1) **emular AS-REP Roasting real** (Rubeus/Kali) para validar 100140; (2) evaluar **FIM de frecuencia** como deteccion complementaria del cifrado masivo (T1486) directo; (3) anadir el runbook `RB-100180` al Proyecto 1.

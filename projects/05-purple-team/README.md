@@ -44,8 +44,8 @@ Hyper-V aislado. Señuelos AD desplegados: `svc_sql` (SPN `MSSQLSvc/sql01.corp.l
 | Defense Evasion | T1027 Obfuscation | Regla 100120 | **Detectado** |
 | Defense Evasion | T1562.001 Impair Defenses | Regla 100130 | **Detectado** |
 | Command & Control | T1105 Ingress Tool Transfer | Regla 100150 + Defender 100160/100161 | **Detectado** — defensa en profundidad |
-| Impact | T1486 Data Encrypted for Impact | — | **Gap** (mejora diseñada → 100180) |
-| Impact | T1490 Inhibit System Recovery | Regla 100180 (nivel 13) | **Mejora diseñada**, despliegue pendiente |
+| Impact | T1486 Data Encrypted for Impact | — | **Gap** (mitigado vía su precursor T1490 / 100180) |
+| Impact | T1490 Inhibit System Recovery | Regla 100180 (nivel 13) + caso AR | **DETECTADO** (mejora validada en vivo) |
 
 Matriz completa de cobertura: **[`attack-detection-matrix.md`](attack-detection-matrix.md)** · Informe del ciclo: **[`purple-report.md`](purple-report.md)**.
 
@@ -66,11 +66,11 @@ El ejemplo de libro de por qué Purple Team funciona: un punto ciego encontrado,
 
 > **Lección:** una regla atada a un único sensor es un punto ciego. Casar el **campo común** (`commandLine`) da cobertura **agnóstica del sensor** y resistente a *tamper*.
 
-### Ciclo #2 — Ransomware / T1486 → T1490 · DISEÑADO (despliegue pendiente)
+### Ciclo #2 — Ransomware / T1486 → T1490 · VALIDADO EN VIVO
 
 1. El ejercicio de **IR (P4)** reveló que la etapa de **Impacto** —cifrado/renombrado masivo de 6 ficheros dummy a `*.locked` + nota de rescate (sin cifrado real)— **no disparó nada**. Detectar el cifrado masivo directo (T1486) en el SIEM es difícil sin un FIM de frecuencia.
 2. **IMPROVE** — se autoró la regla **`100180` (nivel 13, T1490 Inhibit System Recovery)** que caza por `commandLine` el borrado de Shadow Copies / backups (`vssadmin`, `wmic shadowcopy`, `wbadmin`, `bcdedit`): el **precursor detectable** que casi todo ransomware ejecuta justo antes de cifrar.
-3. **Estado:** regla autorada y en el repo (`wazuh/rules/local_rules.xml`). Su **despliegue + validación en el manager queda pendiente de autorización explícita** (modifica la infraestructura del SIEM) — el mismo estado que tuvo el Active Response antes de aprobarse.
+3. **RE-EMULAR + estado:** **desplegada y validada en vivo (2026-06-15)** — tras autorizar el cambio en el manager, se re-emuló el borrado de Shadow Copies de forma benigna (`cmd /c "rem … vssadmin delete shadows …"`, no destructivo) → **100180 disparó (nivel 13)** y el Active Response abrió el caso `CASE-20260615-202434-100180`. **Gap del Proyecto 4 cerrado con evidencia.**
 
 ---
 
@@ -116,4 +116,4 @@ projects/05-purple-team/
 - **Detection engineering iterativo**: encontrar un punto ciego (`image` vs `commandLine`), entender la causa raíz (telemetría por sensor) y **demostrar la corrección en vivo**.
 - Pensamiento de **defensa en profundidad** y de **detección agnóstica del sensor / del cifrado** (honeypot sobre firma frágil).
 - **Cuantificación de cobertura** (técnicas emuladas / detectadas / gaps) como métrica de madurez del SOC.
-- Rigor operativo: distinguir lo **demostrado en vivo** de lo **diseñado y pendiente de autorización**, sin inflar resultados.
+- Rigor operativo: distinguir lo **demostrado en vivo** (los dos ciclos de mejora) de lo **armado pero aún no emulado** (AS-REP / 100140), sin inflar resultados.
