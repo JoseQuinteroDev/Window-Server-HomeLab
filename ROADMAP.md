@@ -204,7 +204,7 @@ Detalle en la sección 5. Orden recomendado: **3 → 2 → 1 → 4 → 5 → 6 �
 - [x] Proyecto 3 — Detection Engineering *(5 detecciones Sigma+KQL, 4 validadas por simulación; AS-REP a falta de KALI — 2026-06-14)*
 - [x] Proyecto 2 — Threat Hunting Case Study *(6 hunts grounded en telemetría real del lab + matriz ATT&CK; honeypots svc_sql/a.garcia; el mito del RC4 (AES en WS2025); EDR como pista de caza; ciclo hunt→detección (7045) — 2026-06-15)*
 - [x] Proyecto 1 — SOC Automation Playbook *(lifecycle + 6 runbooks por detección + triage/enriquecimiento/decision-tree + plantillas; automatización Wazuh Active Response (apertura automática de caso) **desplegada y validada en vivo** (Kerberoasting 100110 → caso abierto solo) — 2026-06-15)*
-- [ ] Proyecto 4 — Incident Response (ransomware)
+- [x] Proyecto 4 — Incident Response (ransomware) *(incidente simulado benigno en WIN11: cadena Kerberoasting→exec→evasión→ingress→impacto T1486; informe PICERL + timeline + evidencia real; el AR abrió 7 casos solos; defensa en profundidad (certutil frenado por 100150 Y Defender); gap de impacto sin detección → regla candidata 100180 — 2026-06-15)*
 - [ ] Proyecto 5 — Purple Team Simulation
 - [ ] Proyecto 6 — Threat Intelligence Report
 - [ ] Proyecto 7 — SOC Metrics Dashboard
