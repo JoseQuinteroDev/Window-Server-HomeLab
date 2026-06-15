@@ -88,11 +88,21 @@
   </rule>
 
   <!-- ====================================================================
-       5) LOLBIN DE DESCARGA  (T1105)  -- Sysmon EID 1 (image + commandLine)
+       5) LOLBIN DE DESCARGA  (T1105)
+          Validacion 2026-06-15 (WIN11): la version inicial casaba
+          win.eventdata.image, campo que SOLO emite Sysmon EID1. Pero el Sysmon
+          del lab usa ProcessCreate onmatch="include" y NO lista certutil/bitsadmin
+          -> no se genera EID1 para ellos; el unico evento es Security 4688, donde
+          la imagen va en newProcessName (image=null) -> la regla nunca disparaba
+          pese a un ataque real (true negative; el evento entraba como rule 67027).
+          Fix: casar win.eventdata.commandLine, campo COMUN a Sysmon EID1 y a 4688
+          (mismo patron que la regla 100130 de Defender, que si funciono en ambos
+          sensores) -> deteccion agnostica del sensor y resistente a tamper de
+          Sysmon. Detalle: wazuh/evidence/endpoint-detections-win11.md
        ==================================================================== -->
   <rule id="100150" level="10">
     <if_group>windows</if_group>
-    <field name="win.eventdata.image" type="pcre2">(?i)\\certutil\.exe$</field>
+    <field name="win.eventdata.commandLine" type="pcre2">(?i)\bcertutil(\.exe)?\b</field>
     <field name="win.eventdata.commandLine" type="pcre2">(?i)(-urlcache|/urlcache|-verifyctl|-split)</field>
     <description>LOLBin: certutil descargando/cacheando contenido de una URL</description>
     <mitre>
@@ -103,7 +113,7 @@
 
   <rule id="100151" level="10">
     <if_group>windows</if_group>
-    <field name="win.eventdata.image" type="pcre2">(?i)\\bitsadmin\.exe$</field>
+    <field name="win.eventdata.commandLine" type="pcre2">(?i)\bbitsadmin(\.exe)?\b</field>
     <field name="win.eventdata.commandLine" type="pcre2">(?i)/transfer</field>
     <description>LOLBin: bitsadmin /transfer (descarga por BITS)</description>
     <mitre>
@@ -114,13 +124,38 @@
 
   <rule id="100152" level="10">
     <if_group>windows</if_group>
-    <field name="win.eventdata.image" type="pcre2">(?i)\\mshta\.exe$</field>
+    <field name="win.eventdata.commandLine" type="pcre2">(?i)\bmshta(\.exe)?\b</field>
     <field name="win.eventdata.commandLine" type="pcre2">(?i)(http://|https://)</field>
     <description>LOLBin: mshta ejecutando una URL remota</description>
     <mitre>
       <id>T1105</id>
     </mitre>
     <group>lolbin,command_and_control,</group>
+  </rule>
+
+  <!-- ====================================================================
+       6) DETECCIONES DEL PROPIO DEFENDER (el EDR como fuente de verdad)
+          Canal Microsoft-Windows-Windows Defender/Operational
+          1116 = malware/PUA detectado  |  1117 = accion de proteccion tomada
+          Anadido 2026-06-15: durante la validacion en WIN11, Defender detecto y
+          BLOQUEO el certutil -urlcache (Trojan:Win32/Ceprolad.A) pero esos eventos
+          no llegaban al SIEM (el canal Defender no se ingeria). Defensa en
+          profundidad: 100150 lo caza via 4688, y aqui ademas oimos al propio EDR.
+       ==================================================================== -->
+  <rule id="100160" level="12">
+    <if_group>windows</if_group>
+    <field name="win.system.channel" type="pcre2">(?i)Windows Defender/Operational</field>
+    <field name="win.system.eventID">^1116$</field>
+    <description>Microsoft Defender detecto malware/PUA (EID 1116)</description>
+    <group>defender,antivirus_detection,</group>
+  </rule>
+
+  <rule id="100161" level="10">
+    <if_group>windows</if_group>
+    <field name="win.system.channel" type="pcre2">(?i)Windows Defender/Operational</field>
+    <field name="win.system.eventID">^1117$</field>
+    <description>Microsoft Defender ejecuto una accion de proteccion (EID 1117: bloqueo/cuarentena)</description>
+    <group>defender,antivirus_action,</group>
   </rule>
 
 </group>

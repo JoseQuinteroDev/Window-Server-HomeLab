@@ -24,6 +24,12 @@
         <Image condition="end with">\mshta.exe</Image>
         <Image condition="end with">\wscript.exe</Image>
         <Image condition="end with">\cscript.exe</Image>
+        <!-- LOLBins de descarga (T1105). Anadidos 2026-06-15 tras validacion en WIN11:
+             sin estar en el include, certutil/bitsadmin no generaban Sysmon EID1 y
+             solo quedaba el Security 4688 (image en newProcessName). Con esto obtenemos
+             tambien hash SHA256 + linaje del proceso para hunting/IR. -->
+        <Image condition="end with">\certutil.exe</Image>
+        <Image condition="end with">\bitsadmin.exe</Image>
       </ProcessCreate>
     </RuleGroup>
 
