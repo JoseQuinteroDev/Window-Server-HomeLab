@@ -104,13 +104,21 @@ Salida esperada en `soc-cases.log` (ejemplo):
 {"case":"CASE-20260615-xxxxxx-100110","opened":"...","rule":"100110","level":12,"agent":"DC01","mitre":"T1558.003","status":"NEW","description":"Kerberoasting (honeypot): TGS solicitado para la cuenta senuelo svc_sql","alert_ts":"..."}
 ```
 
-## Estado
+## Estado — ✅ DESPLEGADA Y VALIDADA (2026-06-15)
 
-> **Diseñada y lista para desplegar.** La validación **en vivo** quedó **pendiente de autorización explícita**:
-> registrar un Active Response ejecutado como `root` y modificar el `ossec.conf` del manager es un cambio
-> persistente sobre la infraestructura del SIEM, fuera del alcance de una orden genérica. Una vez autorizado, los
-> pasos 3–4 lo despliegan y validan end-to-end (la detección Kerberoasting `100110` del DC ya está operativa para
-> disparar la prueba).
+Desplegada en el manager (`location=server`, `rules_group=soc_lab`) y **validada end-to-end**: se disparó
+Kerberoasting (`100110`, nivel 12) en DC01 y el Active Response **abrió el caso automáticamente**. Entrada real
+del casebook (`/var/ossec/logs/soc-cases.log`):
+
+```json
+{"case":"CASE-20260615-192139-100110","opened":"2026-06-15T19:21:39Z","rule":"100110","level":12,"agent":"DC01","mitre":"T1558.003","status":"NEW","description":"Kerberoasting (honeypot): TGS solicitado para la cuenta senuelo svc_sql","alert_ts":"2026-06-15T19:21:39.790+0000"}
+```
+
+La alerta `4769 → 100110` y la apertura del caso comparten timestamp (**19:21:39**) → automatización inmediata,
+**sin intervención del analista**. El caso nace en estado `NEW`, con regla, nivel, agente y técnica MITRE ya
+poblados, listo para el triage del runbook [`RB-100110`](../runbooks/RB-100110-kerberoasting.md). El casebook es
+el artefacto de evidencia (un AR de `location=server` puede no escribir en `active-responses.log`; el caso en
+`soc-cases.log` es la prueba definitiva de ejecución).
 
 ## Evolución (siguiente nivel de automatización)
 
