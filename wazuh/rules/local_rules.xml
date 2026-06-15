@@ -158,4 +158,22 @@
     <group>defender,antivirus_action,</group>
   </rule>
 
+  <!-- ====================================================================
+       7) INHIBICION DE RECUPERACION (T1490) — precursor de ransomware
+          Anadido 2026-06-15 (Purple Team, P5): el ejercicio IR (P4) revelo que la
+          etapa de IMPACTO no disparaba nada. El cifrado masivo (T1486) es dificil de
+          ver en el SIEM sin FIM de frecuencia; el precursor DETECTABLE y de alta senal
+          es el borrado de Shadow Copies / backups (T1490), que casi todo ransomware
+          ejecuta justo antes de cifrar. Se caza por commandLine (comun a 4688 y Sysmon).
+       ==================================================================== -->
+  <rule id="100180" level="13">
+    <if_group>windows</if_group>
+    <field name="win.eventdata.commandLine" type="pcre2">(?i)(vssadmin(\.exe)?\s+(delete|resize)\s+shadow|wmic\s+shadowcopy\s+delete|wbadmin\s+delete\s+(catalog|systemstatebackup)|bcdedit.{0,40}(recoveryenabled\s+no|bootstatuspolicy\s+ignoreallfailures)|Remove-CimInstance.{0,40}Win32_ShadowCopy)</field>
+    <description>Inhibicion de recuperacion del sistema (borrado de Shadow Copies/backups) - precursor de ransomware</description>
+    <mitre>
+      <id>T1490</id>
+    </mitre>
+    <group>ransomware,impact,inhibit_recovery,</group>
+  </rule>
+
 </group>

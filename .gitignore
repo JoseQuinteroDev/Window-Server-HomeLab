@@ -18,3 +18,20 @@ $RECYCLE.BIN/
 # IDE
 .idea/
 .vs/
+
+# === Apuntes / notas personales — NUNCA al portfolio publico ===
+# Carpetas: guarda tus apuntes en cualquiera de estas y no se suben
+apuntes/
+_apuntes/
+notas/
+mis-notas/
+# Ficheros: nombralos con estos patrones y quedan fuera del push
+*apuntes*
+*Apuntes*
+*APUNTES*
+*.notas.md
+*-notas.md
+NOTAS*.md
+*.private.md
+*.local.md
+# (lo que empieza por _ tambien esta ignorado — ver "Scratch / temporales")
