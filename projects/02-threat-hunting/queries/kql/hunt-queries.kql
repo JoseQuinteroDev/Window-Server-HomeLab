@@ -1,0 +1,79 @@
+// Queries KQL de caza - equivalentes Sentinel / Defender XDR (Proyecto 2 - Threat Hunting)
+// El lab corre Wazuh; este KQL es el equivalente teorico para un SIEM cloud. No se ejecuta.
+
+// ============ H1 - PowerShell ofuscado / cradles de ejecucion ============
+// T1059.001 PowerShell (Command and Scripting Interpreter) + T1027 Obfuscated Files or Information | Execution (TA0002); secundaria Defense Evasion (TA0005) por T1027
+// (A) Defender XDR Advanced Hunting — scriptblock 4104 ofuscado.
+DeviceEvents
+| where ActionType == "PowerShellCommand"
+| extend Script = tostring(parse_json(AdditionalFields).ScriptBlockText)
+| where Script matches regex @"(?i)(FromBase64String|Invoke-Expression|\bIEX\b|DownloadString|DownloadData|Net\.WebClient|Invoke-WebRequest|\bIWR\b)"
+| project Timestamp, DeviceName, InitiatingProcessFileName, Indicador = Script
+
+// (B) Defender XDR — el -EncodedCommand en la linea de comandos del proceso.
+DeviceProcessEvents
+| where FileName in~ ("powershell.exe", "pwsh.exe")
+| where ProcessCommandLine has_any ("-enc", "-EncodedCommand", "FromBase64String", "DownloadString", "Net.WebClient")
+| project Timestamp, DeviceName, InitiatingProcessFileName, Indicador = ProcessCommandLine
+
+// (C) Microsoft Sentinel — canal PowerShell/Operational via AMA (equivalente directo del 4104 de Wazuh).
+Event
+| where Source == "Microsoft-Windows-PowerShell" and EventID == 4104
+| where RenderedDescription has_any (
+    "FromBase64String","Invoke-Expression","IEX","DownloadString",
+    "DownloadData","Net.WebClient","Invoke-WebRequest","-enc","-EncodedCommand")
+| project TimeGenerated, Computer, RenderedDescription
+| sort by TimeGenerated desc
+
+// ============ H2 - Ingress Tool Transfer via LOLBins (certutil/bitsadmin/mshta) ============
+// T1105 Ingress Tool Transfer (relacionada: T1218.005 Mshta para el caso de mshta) | Command and Control (TA0011)
+DeviceProcessEvents
+| where FileName in~ ("certutil.exe", "bitsadmin.exe", "mshta.exe")
+| where ProcessCommandLine has_any ("-urlcache", "/transfer", "http://", "https://")
+| project Timestamp, DeviceName, FileName, ProcessCommandLine,
+          InitiatingProcessFileName, AccountName
+| sort by Timestamp desc
+
+// ============ H3 - Evasion de defensas: tamper de Defender + el EDR como pista de caza ============
+// T1562.001 Impair Defenses: Disable or Modify Tools | Defense Evasion (TA0005)
+DeviceProcessEvents
+| where ProcessCommandLine has_any
+    ("Add-MpPreference", "-ExclusionPath", "DisableRealtimeMonitoring", "Set-MpPreference")
+| project Timestamp, DeviceName, AccountName, FileName, ProcessCommandLine, InitiatingProcessFileName
+| order by Timestamp desc
+
+// ============ H4 - Persistencia: servicios nuevos (7045) ============
+// T1543.003 Create or Modify System Process: Windows Service | Persistence / Privilege Escalation
+// A) System 7045 -> tabla DeviceEvents (ActionType "ServiceInstalled")
+DeviceEvents
+| where ActionType == "ServiceInstalled"            // origen: System EID 7045
+| extend Svc = tostring(parse_json(AdditionalFields).ServiceName),
+         ImagePath = tostring(parse_json(AdditionalFields).ImagePath)
+| where ImagePath has_any ("\\Temp\\","\\AppData\\","\\ProgramData\\","\\Users\\","\\Public\\")
+| project Timestamp, DeviceName, Svc, ImagePath, InitiatingProcessAccountName
+
+// B) Como se creo el servicio (proceso que invoco sc.exe / New-Service)
+DeviceProcessEvents
+| where ProcessCommandLine has_any ("sc create","sc.exe create","New-Service")
+| project Timestamp, DeviceName, AccountName,
+          ProcessCommandLine, InitiatingProcessFileName
+
+// ============ H5 - Kerberoasting (honeypot svc_sql) y el mito del RC4 ============
+// T1558.003 Kerberoasting | Credential Access
+SecurityEvent
+| where EventID == 4769
+| extend Service = ServiceName, Enc = tostring(TicketEncryptionType), RequestedBy = TargetUserName
+| where Service =~ "svc_sql"        // (a) honeypot: deteccion deterministica, agnostica del cifrado
+      or Enc == "0x17"              // (b) clasico: RC4 forzado
+| project TimeGenerated, Computer, Service, Enc, RequestedBy, IpAddress
+| sort by TimeGenerated desc
+
+// ============ H6 - Cuentas AS-REP roastables (config hunt) ============
+// T1558.004 AS-REP Roasting (Steal or Forge Kerberos Tickets) | Credential Access
+// AS-REP Roasting — AS-REQ sin preautenticacion (Pre-Auth Type 0)
+SecurityEvent
+| where EventID == 4768
+| where PreAuthType == "0"
+| project TimeGenerated, TargetUserName, PreAuthType, TicketEncryptionType, IpAddress, Computer
+| sort by TimeGenerated desc
+
