@@ -206,7 +206,7 @@ Detalle en la sección 5. Orden recomendado: **3 → 2 → 1 → 4 → 5 → 6 �
 - [x] Proyecto 1 — SOC Automation Playbook *(lifecycle + 6 runbooks por detección + triage/enriquecimiento/decision-tree + plantillas; automatización Wazuh Active Response (apertura automática de caso) **desplegada y validada en vivo** (Kerberoasting 100110 → caso abierto solo) — 2026-06-15)*
 - [x] Proyecto 4 — Incident Response (ransomware) *(incidente simulado benigno en WIN11: cadena Kerberoasting→exec→evasión→ingress→impacto T1486; informe PICERL + timeline + evidencia real; el AR abrió 7 casos solos; defensa en profundidad (certutil frenado por 100150 Y Defender); gap de impacto sin detección → regla candidata 100180 — 2026-06-15)*
 - [x] Proyecto 5 — Purple Team Simulation *(matriz cobertura ATT&CK: 8 técnicas, 86% de lo emulado detectado; DOS ciclos de mejora demostrados en vivo: certutil image→commandLine (missed→fix→re-detectado) y regla 100180/T1490 para el gap de impacto (desplegada + re-emulada → disparó nivel 13 + caso AR, cierra el gap del P4); defensa en profundidad; el AR abre casos solos — 2026-06-15)*
-- [ ] Proyecto 6 — Threat Intelligence Report
+- [x] Proyecto 6 — Threat Intelligence Report *(CTI de **Akira** (CISA AA24-109A): informe ejecutivo+técnico + tabla ATT&CK + IOCs; 16 técnicas cruzadas vs lab → 3 ya cubiertas, **1 evasión descubierta** (Akira borra shadow copies por WMI y evade la regla 100180 validada en P5 → nueva 100181), 6 huecos → **7 reglas nuevas** Sigma/KQL/Wazuh (100181, 100190-100230) + simulación benigna reproducible; despliegue/validación en vivo pendiente de autorización — 2026-06-20)*
 - [ ] Proyecto 7 — SOC Metrics Dashboard
 
 **Track redes (paralelo)**

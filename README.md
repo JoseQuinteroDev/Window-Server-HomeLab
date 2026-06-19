@@ -28,10 +28,24 @@ La idea que lo unifica todo: **UN laboratorio** (Hyper-V, aislado) que, corriend
 | 2 | Estructura AD (OUs, usuarios, grupos) + **señuelos** Kerberoasting/AS-REP | ✅ |
 | 3 | **WIN11 Pro** (instalación desatendida) unido al dominio | ✅ |
 | 4 | GPO + Auditoría (4688/4624-25/4769/4768, PowerShell logging) | ✅ |
-| 1b | Telemetría: **Sysmon en WIN11** ✅ · **Sentinel** kit de despliegue listo ([sentinel/](sentinel/)) ⏳ pendiente de cuenta Azure |
-| 2b | Los 7 entregables → **Proyecto 3 Detection Engineering** ✅ ([projects/03](projects/03-detection-engineering/)) · resto ⏳ |
+| 1b | Telemetría + **SIEM = Wazuh 4.13.1** (self-hosted, aislado) + Active Response · Sysmon en WIN11 | ✅ |
+| 2b | **Los 7 entregables** (ver tabla abajo) → **6 de 7 completados** | 🔄 |
 
-Evidencia de validación: [`evidence/lab-validation.md`](evidence/lab-validation.md).
+Evidencia de validación del lab: [`evidence/lab-validation.md`](evidence/lab-validation.md).
+
+## 🗂️ Los 7 proyectos
+
+| # | Proyecto | Estado |
+|---|---|---|
+| 3 | [Detection Engineering](projects/03-detection-engineering/) — Sigma + KQL, validado por simulación | ✅ |
+| 2 | [Threat Hunting](projects/02-threat-hunting/) — 6 hunts sobre telemetría real + matriz ATT&CK | ✅ |
+| 1 | [SOC Automation Playbook](projects/01-soc-automation-playbook/) — lifecycle + runbooks + Active Response | ✅ |
+| 4 | [Incident Response](projects/04-incident-response/) — ransomware simulado (PICERL) | ✅ |
+| 5 | [Purple Team](projects/05-purple-team/) — matriz cobertura ATT&CK + 2 ciclos de mejora | ✅ |
+| 6 | [Threat Intelligence](projects/06-threat-intel/) — CTI de **Akira** → 7 detecciones derivadas | ✅ |
+| 7 | SOC Metrics & Reporting Dashboard | ⬜ |
+
+> Orden pedagógico **3→2→1→4→5→6→7**. SIEM: [`wazuh/`](wazuh/) · alternativa cloud aparcada: [`sentinel/`](sentinel/).
 
 ## 📂 Estructura
 
@@ -42,6 +56,9 @@ Evidencia de validación: [`evidence/lab-validation.md`](evidence/lab-validation
 | [`lab-tools/`](lab-tools/) | Automatización del lab en PowerShell (ver abajo). |
 | [`cuaderno-windows-soc/`](cuaderno-windows-soc/) | Fase 0.A: cuaderno de triage de endpoint Windows con herramientas nativas. |
 | [`evidence/`](evidence/) | Capturas y salidas de validación. |
+| [`projects/`](projects/) | Los 7 entregables SOC (un subdirectorio por proyecto). |
+| [`wazuh/`](wazuh/) | SIEM self-hosted: reglas, ingesta de agentes, runbook de despliegue. |
+| [`sentinel/`](sentinel/) | Kit alternativo cloud (Sentinel/Defender XDR), aparcado a favor de Wazuh. |
 
 ## 🤖 Automatización (`lab-tools/`)
 
