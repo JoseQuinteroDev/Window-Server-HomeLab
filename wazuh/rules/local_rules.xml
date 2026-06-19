@@ -176,4 +176,106 @@
     <group>ransomware,impact,inhibit_recovery,</group>
   </rule>
 
+  <!-- ====================================================================
+       PROYECTO 6 — detecciones DERIVADAS del CTI de Akira (CISA AA24-109A).
+       Mapeo a ATT&CK + análisis en projects/06-threat-intel/. Todas casan
+       win.eventdata.commandLine (común a 4688 y Sysmon EID1), salvo 100210
+       (PowerShell 4104). level >= 10 => alerta.
+       ==================================================================== -->
+
+  <!-- 8) INHIBICION DE RECUPERACION via WMI (T1490) — Akira evade vssadmin
+          borrando shadow copies con Get-WmiObject Win32_Shadowcopy .Delete().
+          La regla 100180 NO casa este patron; 100181 cierra esa evasion. -->
+  <rule id="100181" level="13">
+    <if_group>windows</if_group>
+    <field name="win.eventdata.commandLine" type="pcre2">(?i)win32_shadowcopy</field>
+    <field name="win.eventdata.commandLine" type="pcre2">(?i)(\$_\.Delete\(\)|\.Delete\(\)\s*;|ForEach-Object.{0,15}Delete|\|\s*%\s*\{?.{0,10}Delete)</field>
+    <description>Inhibicion de recuperacion: borrado de Shadow Copies via WMI (Get-WmiObject Win32_Shadowcopy .Delete) - tecnica de Akira que evade vssadmin</description>
+    <mitre>
+      <id>T1490</id>
+    </mitre>
+    <group>ransomware,impact,inhibit_recovery,akira,</group>
+  </rule>
+
+  <!-- 9) VOLCADO DE LSASS (T1003.001) — comsvcs.dll MiniDump / procdump -->
+  <rule id="100190" level="13">
+    <if_group>windows</if_group>
+    <field name="win.eventdata.commandLine" type="pcre2">(?i)comsvcs(\.dll)?</field>
+    <field name="win.eventdata.commandLine" type="pcre2">(?i)(minidump|#\s*\+?\s*24)</field>
+    <description>Volcado de credenciales LSASS via comsvcs.dll MiniDump (rundll32) - credential access</description>
+    <mitre>
+      <id>T1003.001</id>
+    </mitre>
+    <group>credential_access,lsass_dump,akira,</group>
+  </rule>
+
+  <rule id="100191" level="13">
+    <if_group>windows</if_group>
+    <field name="win.eventdata.commandLine" type="pcre2">(?i)procdump(64)?(\.exe)?</field>
+    <field name="win.eventdata.commandLine" type="pcre2">(?i)(-ma\b|-mm\b|\blsass)</field>
+    <description>Volcado de credenciales LSASS via procdump (-ma lsass) - credential access</description>
+    <mitre>
+      <id>T1003.001</id>
+    </mitre>
+    <group>credential_access,lsass_dump,</group>
+  </rule>
+
+  <!-- 10) RECONOCIMIENTO DE DOMINIO (T1018 + T1482) — nltest / net group -->
+  <rule id="100200" level="10">
+    <if_group>windows</if_group>
+    <field name="win.eventdata.commandLine" type="pcre2">(?i)(\bnltest(\.exe)?\b.{0,40}/(dclist|domain_trusts|trusted_domains|dsgetdc)|\bnet1?(\.exe)?\s+group\b.{0,40}(/domain|domain admins|enterprise admins))</field>
+    <description>Reconocimiento de Active Directory (nltest /dclist|/domain_trusts o net group Domain Admins) - discovery</description>
+    <mitre>
+      <id>T1018</id>
+      <id>T1482</id>
+    </mitre>
+    <group>discovery,domain_recon,akira,</group>
+  </rule>
+
+  <!-- 11) BLOODHOUND / SHARPHOUND (T1087.002) — 4104 (PS) y commandLine -->
+  <rule id="100210" level="12">
+    <if_group>windows</if_group>
+    <field name="win.system.eventID">^4104$</field>
+    <field name="win.eventdata.scriptBlockText" type="pcre2">(?i)(Invoke-BloodHound|Get-BloodHoundData|SharpHound|-CollectionMethod\s+(All|DCOnly|Session|LoggedOn))</field>
+    <description>Enumeracion de dominio con BloodHound/SharpHound (ingestor PowerShell, 4104) - account discovery</description>
+    <mitre>
+      <id>T1087.002</id>
+    </mitre>
+    <group>discovery,bloodhound,akira,</group>
+  </rule>
+
+  <rule id="100211" level="12">
+    <if_group>windows</if_group>
+    <field name="win.eventdata.commandLine" type="pcre2">(?i)(\bsharphound(\.exe)?\b|\bbloodhound(\.exe)?\b|-CollectionMethod\s+(All|DCOnly|Session))</field>
+    <description>Enumeracion de dominio con SharpHound/BloodHound (colector compilado, commandLine) - account discovery</description>
+    <mitre>
+      <id>T1087.002</id>
+    </mitre>
+    <group>discovery,bloodhound,akira,</group>
+  </rule>
+
+  <!-- 12) CREACION DE CUENTA (T1136.001) — net user /add (corroborar 4720) -->
+  <rule id="100220" level="10">
+    <if_group>windows</if_group>
+    <field name="win.eventdata.commandLine" type="pcre2">(?i)\bnet1?(\.exe)?\s+user\b</field>
+    <field name="win.eventdata.commandLine" type="pcre2">(?i)/add\b</field>
+    <description>Creacion de cuenta de usuario via linea de comandos (net user /add) - posible persistencia</description>
+    <mitre>
+      <id>T1136.001</id>
+    </mitre>
+    <group>persistence,account_creation,akira,</group>
+  </rule>
+
+  <!-- 13) HABILITACION DE RDP (T1021.001 / T1562.004) — netsh / fDenyTSConnections -->
+  <rule id="100230" level="10">
+    <if_group>windows</if_group>
+    <field name="win.eventdata.commandLine" type="pcre2">(?i)(netsh\s+advfirewall\s+firewall\s+add\s+rule.{0,80}(3389|\brdp\b|terminal\s*services)|fDenyTSConnections.{0,25}\b0\b|reg\s+add.{0,80}fDenyTSConnections)</field>
+    <description>Habilitacion de RDP (regla de firewall netsh o fDenyTSConnections=0) - preparacion de movimiento lateral</description>
+    <mitre>
+      <id>T1021.001</id>
+      <id>T1562.004</id>
+    </mitre>
+    <group>lateral_movement,defense_evasion,rdp,akira,</group>
+  </rule>
+
 </group>

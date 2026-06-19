@@ -1,10 +1,11 @@
 # 🚀 Despliegue y validación — detecciones derivadas de Akira
 
-> **Honestidad metodológica (norma del portfolio):** las 7 reglas están **autoradas y listas**, pero
-> **aún no desplegadas/validadas en vivo**. Desplegarlas modifica la infraestructura del SIEM (manager
-> Wazuh) y requiere el lab encendido + autorización explícita — el mismo criterio que aplicamos en el
-> [Purple Team (P5)](../../05-purple-team/attack-detection-matrix.md) con la regla 100180 antes de validarla.
-> Este documento deja el despliegue **turnkey**: runbook + resultados esperados.
+> **Honestidad metodológica (norma del portfolio):** las 8 reglas están **autoradas e integradas en el
+> ruleset canónico** ([`wazuh/rules/local_rules.xml`](../../../wazuh/rules/local_rules.xml)) y el despliegue
+> está **scriptado en un comando** ([`tests/Deploy-AndValidate-Akira.ps1`](../tests/Deploy-AndValidate-Akira.ps1)),
+> pero la **validación en vivo está pendiente de ejecutar**: requiere el lab encendido + PowerShell elevada
+> (Hyper-V) + credenciales SSH del manager. Mismo criterio que en el
+> [Purple Team (P5)](../../05-purple-team/attack-detection-matrix.md) con la 100180 antes de validarla.
 
 ## Estado actual
 
@@ -18,6 +19,19 @@
 | 100211 | T1087.002 (SharpHound cmdline) | ✅ | ⏳ | ⏳ |
 | 100220 | T1136.001 (crear cuenta) | ✅ | ⏳ | ⏳ |
 | 100230 | T1021.001 / T1562.004 (RDP) | ✅ | ⏳ | ⏳ |
+
+## Despliegue + validación en UN comando (recomendado)
+
+Desde el **HOST en PowerShell elevada**, con DC01 + WIN11 + WAZUH encendidas:
+
+```powershell
+.\tests\Deploy-AndValidate-Akira.ps1            # pregunta el usuario SSH del manager
+# o:  .\tests\Deploy-AndValidate-Akira.ps1 -SshUser <usuario>
+```
+
+El script: hace checkpoint de DC01/WIN11 → sube el ruleset al manager (scp) → valida (`wazuh-logtest -t`)
+→ reinicia el manager → lanza la simulación benigna → recoge las alertas y los casos del Active Response.
+El runbook manual de abajo es el desglose paso a paso (fallback / comprensión).
 
 ## Runbook de despliegue (manager Wazuh `10.10.10.20`)
 
