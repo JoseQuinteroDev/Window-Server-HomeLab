@@ -1,0 +1,301 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SOC Metrics — Lab corp.local</title>
+<style>
+  :root{
+    --bg:#0b0f17; --panel:#121826; --panel2:#0f1420; --line:#1f2a3c;
+    --ink:#e6edf6; --muted:#8aa0bd; --dim:#5d7290;
+    --accent:#33d6c2; --accent2:#4aa3ff; --blue:#4aa3ff;
+    --n13:#ff5d6c; --n12:#ffb454; --n10:#33d6c2;
+    --good:#33d6c2;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;background:var(--bg);color:var(--ink);
+    font-family:"Segoe UI",system-ui,-apple-system,Roboto,Helvetica,Arial,sans-serif;
+    -webkit-font-smoothing:antialiased;line-height:1.5}
+  body{overflow-x:hidden}
+  .wrap{max-width:1180px;margin:0 auto;padding:28px 20px 56px}
+  code,.mono{font-family:"Cascadia Code",ui-monospace,"SFMono-Regular",Consolas,monospace}
+
+  /* header */
+  header{border-bottom:1px solid var(--line);padding-bottom:20px;margin-bottom:26px}
+  .eyebrow{color:var(--accent);font-size:12px;letter-spacing:.18em;text-transform:uppercase;font-weight:700}
+  h1{font-size:30px;margin:6px 0 6px;letter-spacing:-.01em}
+  h1 .acc{color:var(--accent)}
+  .sub{color:var(--muted);font-size:15px;max-width:62ch}
+  .badges{margin-top:14px;display:flex;flex-wrap:wrap;gap:8px}
+  .badge{font-size:12px;color:var(--muted);background:var(--panel);border:1px solid var(--line);
+    border-radius:999px;padding:5px 11px}
+  .badge b{color:var(--ink);font-weight:600}
+  .badge .dot{color:var(--good)}
+
+  h2{font-size:13px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);
+    margin:34px 0 14px;font-weight:700;display:flex;align-items:center;gap:10px}
+  h2::before{content:"";width:8px;height:8px;border-radius:2px;background:var(--accent);
+    box-shadow:0 0 10px var(--accent)}
+
+  /* KPI grid */
+  .kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px}
+  .kpi{background:linear-gradient(180deg,var(--panel),var(--panel2));border:1px solid var(--line);
+    border-radius:12px;padding:16px 16px 14px}
+  .kpi .num{font-size:30px;font-weight:800;letter-spacing:-.02em;line-height:1}
+  .kpi .num .of{font-size:16px;color:var(--dim);font-weight:600}
+  .kpi .lab{color:var(--muted);font-size:12.5px;margin-top:8px}
+  .kpi.accent .num{color:var(--accent)}
+  .kpi.blue .num{color:var(--accent2)}
+
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:18px}
+  .grid2>.panel{margin:0}
+  .panel{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:18px 18px 16px}
+  .panel .ptitle{font-weight:700;font-size:14px;margin:0 0 2px}
+  .panel .pnote{color:var(--muted);font-size:12.5px;margin:0 0 14px}
+
+  /* tactic cards */
+  .tactics{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:12px}
+  .tcard{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:14px}
+  .tcard .th{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:10px}
+  .tcard .tname{font-weight:700;font-size:13.5px}
+  .tcard .tcount{color:var(--accent);font-weight:800;font-size:13px}
+  .chips{display:flex;flex-wrap:wrap;gap:6px}
+  .chip{font-size:11.5px;color:var(--muted);background:#0c1322;border:1px solid var(--line);
+    border-radius:6px;padding:3px 7px}
+
+  /* bars */
+  .bars{display:flex;flex-direction:column;gap:11px}
+  .bar .brow{display:flex;justify-content:space-between;font-size:13px;margin-bottom:5px}
+  .bar .blabel{color:var(--ink)} .bar .bval{color:var(--muted)}
+  .track{height:9px;background:#0c1322;border-radius:999px;overflow:hidden;border:1px solid var(--line)}
+  .fill{height:100%;border-radius:999px;background:var(--accent)}
+
+  /* coverage ring */
+  .ringwrap{display:flex;align-items:center;gap:18px}
+  .ring{width:118px;height:118px;border-radius:50%;flex:0 0 auto;
+    background:conic-gradient(var(--accent) 0 85.7%, #18233a 85.7% 100%);
+    display:flex;align-items:center;justify-content:center}
+  .ring .hole{width:84px;height:84px;border-radius:50%;background:var(--panel);
+    display:flex;flex-direction:column;align-items:center;justify-content:center}
+  .ring .pct{font-size:23px;font-weight:800;color:var(--accent)}
+  .ring .pl{font-size:10px;color:var(--muted)}
+
+  /* table */
+  .tablewrap{overflow-x:auto;border:1px solid var(--line);border-radius:12px}
+  table{border-collapse:collapse;width:100%;min-width:640px;font-size:13px}
+  th,td{text-align:left;padding:9px 12px;border-bottom:1px solid var(--line);white-space:nowrap}
+  thead th{color:var(--muted);font-size:11px;letter-spacing:.08em;text-transform:uppercase;
+    background:var(--panel2);position:sticky;top:0}
+  tbody tr:last-child td{border-bottom:none}
+  tbody tr:hover{background:#0e1626}
+  .lv{font-weight:700;font-family:inherit;border-radius:5px;padding:2px 7px;font-size:11.5px}
+  .lv13{color:var(--n13);background:rgba(255,93,108,.10)}
+  .lv12{color:var(--n12);background:rgba(255,180,84,.10)}
+  .lv10{color:var(--n10);background:rgba(51,214,194,.10)}
+  td .tid{color:var(--accent2)}
+  .new{color:var(--accent);font-size:10px;font-weight:800;letter-spacing:.06em;margin-left:6px}
+
+  /* project cards */
+  .projs{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:12px}
+  .pj{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:15px;
+    border-left:3px solid var(--accent)}
+  .pj .pjh{font-weight:700;font-size:13.5px;margin-bottom:6px}
+  .pj .pjh span{color:var(--dim);font-weight:700;margin-right:7px}
+  .pj p{margin:0;color:var(--muted);font-size:12.5px}
+
+  /* timeline */
+  .tl{position:relative;margin-left:8px;padding-left:22px;border-left:2px solid var(--line)}
+  .tl .ev{position:relative;padding:0 0 16px}
+  .tl .ev:last-child{padding-bottom:0}
+  .tl .ev::before{content:"";position:absolute;left:-29px;top:3px;width:12px;height:12px;
+    border-radius:50%;background:var(--accent);border:3px solid var(--bg);box-shadow:0 0 8px var(--accent)}
+  .tl .evh{font-weight:700;font-size:13.5px}
+  .tl .evb{color:var(--muted);font-size:12.5px}
+
+  .note{background:rgba(255,180,84,.07);border:1px solid rgba(255,180,84,.28);border-radius:10px;
+    padding:12px 14px;color:#ffcf99;font-size:12.5px;margin-top:14px}
+  .note b{color:#ffdcb0}
+
+  footer{margin-top:38px;border-top:1px solid var(--line);padding-top:18px;color:var(--muted);font-size:12.5px}
+  footer b{color:var(--ink)}
+  a{color:var(--accent2);text-decoration:none} a:hover{text-decoration:underline}
+
+  @media(max-width:760px){.grid2{grid-template-columns:1fr}.ring{width:104px;height:104px}h1{font-size:25px}}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <div class="eyebrow">SOC Blue Team · Proyecto 7 · Capstone</div>
+    <h1>SOC Metrics &amp; Reporting <span class="acc">Dashboard</span></h1>
+    <p class="sub">Agrega en una vista la producción Blue Team de todo el laboratorio <code>corp.local</code>:
+      detecciones, cobertura MITRE ATT&amp;CK, fuentes de datos, respuesta automática y ciclos de mejora.
+      Datos reales de los Proyectos 1–6.</p>
+    <div class="badges">
+      <span class="badge"><span class="dot">●</span> Lab <b>corp.local</b> (aislado)</span>
+      <span class="badge">SIEM <b>Wazuh 4.13.1</b></span>
+      <span class="badge">Fuentes <b>Windows Security · Sysmon · PowerShell · Defender</b></span>
+      <span class="badge">Autor <b>José Quintero</b></span>
+    </div>
+  </header>
+
+  <!-- KPIs -->
+  <div class="kpis">
+    <div class="kpi accent"><div class="num">19</div><div class="lab">Reglas de detección activas</div></div>
+    <div class="kpi"><div class="num">11</div><div class="lab">Reglas Sigma portables</div></div>
+    <div class="kpi accent"><div class="num">14</div><div class="lab">Técnicas ATT&amp;CK cubiertas</div></div>
+    <div class="kpi"><div class="num">8<span class="of"> / 14</span></div><div class="lab">Tácticas ATT&amp;CK</div></div>
+    <div class="kpi blue"><div class="num">7<span class="of"> / 7</span></div><div class="lab">Proyectos completados</div></div>
+    <div class="kpi"><div class="num">6</div><div class="lab">Fuentes de datos</div></div>
+    <div class="kpi"><div class="num">7</div><div class="lab">Casos SOC auto (Active Response)</div></div>
+    <div class="kpi"><div class="num">3</div><div class="lab">Ciclos de mejora validados</div></div>
+  </div>
+
+  <!-- ATT&CK coverage -->
+  <h2>Cobertura MITRE ATT&amp;CK — 14 técnicas en 8 tácticas</h2>
+  <div class="tactics">
+    <div class="tcard"><div class="th"><span class="tname">Credential Access</span><span class="tcount">3</span></div>
+      <div class="chips"><span class="chip">T1558.003 Kerberoasting</span><span class="chip">T1558.004 AS-REP</span><span class="chip">T1003.001 LSASS</span></div></div>
+    <div class="tcard"><div class="th"><span class="tname">Discovery</span><span class="tcount">3</span></div>
+      <div class="chips"><span class="chip">T1018 Remote Sys</span><span class="chip">T1482 Domain Trust</span><span class="chip">T1087.002 Account</span></div></div>
+    <div class="tcard"><div class="th"><span class="tname">Defense Evasion</span><span class="tcount">3</span></div>
+      <div class="chips"><span class="chip">T1027 Obfuscation</span><span class="chip">T1562.001 Impair Def.</span><span class="chip">T1562.004 Firewall</span></div></div>
+    <div class="tcard"><div class="th"><span class="tname">Impact</span><span class="tcount">1</span></div>
+      <div class="chips"><span class="chip">T1490 Inhibit Recovery</span></div></div>
+    <div class="tcard"><div class="th"><span class="tname">Execution</span><span class="tcount">1</span></div>
+      <div class="chips"><span class="chip">T1059.001 PowerShell</span></div></div>
+    <div class="tcard"><div class="th"><span class="tname">Persistence</span><span class="tcount">1</span></div>
+      <div class="chips"><span class="chip">T1136.001 Create Account</span></div></div>
+    <div class="tcard"><div class="th"><span class="tname">Lateral Movement</span><span class="tcount">1</span></div>
+      <div class="chips"><span class="chip">T1021.001 RDP</span></div></div>
+    <div class="tcard"><div class="th"><span class="tname">Command &amp; Control</span><span class="tcount">1</span></div>
+      <div class="chips"><span class="chip">T1105 Ingress Transfer</span></div></div>
+  </div>
+
+  <!-- severity + data sources -->
+  <h2>Distribución de detecciones</h2>
+  <div class="grid2">
+    <div class="panel">
+      <div class="ptitle">Por severidad (nivel Wazuh)</div>
+      <div class="pnote">19 reglas · nivel ≥10 dispara alerta</div>
+      <div class="bars">
+        <div class="bar"><div class="brow"><span class="blabel">Nivel 13 — crítica</span><span class="bval">4</span></div>
+          <div class="track"><div class="fill" style="width:21%;background:var(--n13)"></div></div></div>
+        <div class="bar"><div class="brow"><span class="blabel">Nivel 12 — alta</span><span class="bval">7</span></div>
+          <div class="track"><div class="fill" style="width:37%;background:var(--n12)"></div></div></div>
+        <div class="bar"><div class="brow"><span class="blabel">Nivel 10 — media</span><span class="bval">8</span></div>
+          <div class="track"><div class="fill" style="width:42%;background:var(--n10)"></div></div></div>
+      </div>
+    </div>
+    <div class="panel">
+      <div class="ptitle">Por fuente de datos</div>
+      <div class="pnote">qué telemetría alimenta cada detección</div>
+      <div class="bars">
+        <div class="bar"><div class="brow"><span class="blabel">Security 4688 + Sysmon EID1 (cmdline)</span><span class="bval">12</span></div>
+          <div class="track"><div class="fill" style="width:100%"></div></div></div>
+        <div class="bar"><div class="brow"><span class="blabel">PowerShell 4104 (Script Block)</span><span class="bval">2</span></div>
+          <div class="track"><div class="fill" style="width:17%"></div></div></div>
+        <div class="bar"><div class="brow"><span class="blabel">Security 4769 (Kerberos TGS)</span><span class="bval">2</span></div>
+          <div class="track"><div class="fill" style="width:17%"></div></div></div>
+        <div class="bar"><div class="brow"><span class="blabel">Microsoft Defender / Operational</span><span class="bval">2</span></div>
+          <div class="track"><div class="fill" style="width:17%"></div></div></div>
+        <div class="bar"><div class="brow"><span class="blabel">Security 4768 (Kerberos AS)</span><span class="bval">1</span></div>
+          <div class="track"><div class="fill" style="width:8%"></div></div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- response metrics + coverage -->
+  <h2>Respuesta y eficacia</h2>
+  <div class="grid2">
+    <div class="panel">
+      <div class="ptitle">Latencia (ejercicios del lab)</div>
+      <div class="pnote">detección por regla en tiempo casi real + respuesta automatizada</div>
+      <div class="bars" style="gap:16px">
+        <div><div class="brow" style="font-size:13px;margin-bottom:3px"><span>MTTD — Mean Time To Detect</span><span class="bval" style="color:var(--accent);font-weight:800">≈ segundos</span></div>
+          <div class="pnote" style="margin:0">Evento → ingesta del agente → match de regla → alerta. Limitado por el intervalo de envío del agente.</div></div>
+        <div><div class="brow" style="font-size:13px;margin-bottom:3px"><span>MTTR — apertura de caso</span><span class="bval" style="color:var(--accent);font-weight:800">≈ segundos</span></div>
+          <div class="pnote" style="margin:0">Active Response <code>open-soc-case</code> abre el caso solo (nivel ≥10), sin intervención humana.</div></div>
+      </div>
+    </div>
+    <div class="panel">
+      <div class="ptitle">Cobertura del bucle Purple (P5)</div>
+      <div class="pnote">técnicas emuladas que generaron al menos una detección</div>
+      <div class="ringwrap">
+        <div class="ring"><div class="hole"><div class="pct">85.7%</div><div class="pl">6 de 7</div></div></div>
+        <div style="font-size:12.5px;color:var(--muted)">
+          De las 7 técnicas emuladas en vivo, 6 se detectaron. El único gap (T1486 cifrado masivo)
+          se <b style="color:var(--ink)">mitiga vía su precursor T1490</b>. Con el CTI de Akira (P6), la
+          cobertura de su cadena intra-dominio observable subió del <b style="color:var(--ink)">~33%→~100%</b>.
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- detection inventory -->
+  <h2>Inventario de detecciones (19 reglas Wazuh)</h2>
+  <div class="tablewrap">
+    <table>
+      <thead><tr><th>Regla</th><th>Técnica ATT&amp;CK</th><th>Táctica</th><th>Fuente</th><th>Nivel</th><th>Origen</th></tr></thead>
+      <tbody>
+        <tr><td class="mono">100110</td><td><span class="tid">T1558.003</span> Kerberoasting (honeypot)</td><td>Credential Access</td><td>4769</td><td><span class="lv lv12">12</span></td><td>P3</td></tr>
+        <tr><td class="mono">100111</td><td><span class="tid">T1558.003</span> Kerberoasting (RC4)</td><td>Credential Access</td><td>4769</td><td><span class="lv lv10">10</span></td><td>P3</td></tr>
+        <tr><td class="mono">100120</td><td><span class="tid">T1059.001</span>/<span class="tid">T1027</span> PowerShell ofuscado</td><td>Execution / Def. Evasion</td><td>4104</td><td><span class="lv lv12">12</span></td><td>P3</td></tr>
+        <tr><td class="mono">100130</td><td><span class="tid">T1562.001</span> Tamper de Defender</td><td>Defense Evasion</td><td>4688</td><td><span class="lv lv12">12</span></td><td>P3</td></tr>
+        <tr><td class="mono">100140</td><td><span class="tid">T1558.004</span> AS-REP Roasting</td><td>Credential Access</td><td>4768</td><td><span class="lv lv12">12</span></td><td>P3</td></tr>
+        <tr><td class="mono">100150</td><td><span class="tid">T1105</span> certutil (LOLBin)</td><td>Command &amp; Control</td><td>4688</td><td><span class="lv lv10">10</span></td><td>P3</td></tr>
+        <tr><td class="mono">100151</td><td><span class="tid">T1105</span> bitsadmin</td><td>Command &amp; Control</td><td>4688</td><td><span class="lv lv10">10</span></td><td>P3</td></tr>
+        <tr><td class="mono">100152</td><td><span class="tid">T1105</span> mshta</td><td>Command &amp; Control</td><td>4688</td><td><span class="lv lv10">10</span></td><td>P3</td></tr>
+        <tr><td class="mono">100160</td><td>Defender detectó malware (EID 1116)</td><td>(EDR como fuente)</td><td>Defender</td><td><span class="lv lv12">12</span></td><td>P3</td></tr>
+        <tr><td class="mono">100161</td><td>Defender acción de protección (1117)</td><td>(EDR como fuente)</td><td>Defender</td><td><span class="lv lv10">10</span></td><td>P3</td></tr>
+        <tr><td class="mono">100180</td><td><span class="tid">T1490</span> Inhibit Recovery (vssadmin/wmic)</td><td>Impact</td><td>4688</td><td><span class="lv lv13">13</span></td><td>P5</td></tr>
+        <tr><td class="mono">100181</td><td><span class="tid">T1490</span> Inhibit Recovery (WMI)<span class="new">AKIRA</span></td><td>Impact</td><td>4688</td><td><span class="lv lv13">13</span></td><td>P6</td></tr>
+        <tr><td class="mono">100190</td><td><span class="tid">T1003.001</span> LSASS (comsvcs)<span class="new">AKIRA</span></td><td>Credential Access</td><td>4688</td><td><span class="lv lv13">13</span></td><td>P6</td></tr>
+        <tr><td class="mono">100191</td><td><span class="tid">T1003.001</span> LSASS (procdump)<span class="new">AKIRA</span></td><td>Credential Access</td><td>4688</td><td><span class="lv lv13">13</span></td><td>P6</td></tr>
+        <tr><td class="mono">100200</td><td><span class="tid">T1018</span>/<span class="tid">T1482</span> Recon de dominio<span class="new">AKIRA</span></td><td>Discovery</td><td>4688</td><td><span class="lv lv10">10</span></td><td>P6</td></tr>
+        <tr><td class="mono">100210</td><td><span class="tid">T1087.002</span> BloodHound (4104)<span class="new">AKIRA</span></td><td>Discovery</td><td>4104</td><td><span class="lv lv12">12</span></td><td>P6</td></tr>
+        <tr><td class="mono">100211</td><td><span class="tid">T1087.002</span> SharpHound (cmdline)<span class="new">AKIRA</span></td><td>Discovery</td><td>4688</td><td><span class="lv lv12">12</span></td><td>P6</td></tr>
+        <tr><td class="mono">100220</td><td><span class="tid">T1136.001</span> Creación de cuenta<span class="new">AKIRA</span></td><td>Persistence</td><td>4688</td><td><span class="lv lv10">10</span></td><td>P6</td></tr>
+        <tr><td class="mono">100230</td><td><span class="tid">T1021.001</span>/<span class="tid">T1562.004</span> Habilitar RDP<span class="new">AKIRA</span></td><td>Lateral Movement</td><td>4688</td><td><span class="lv lv10">10</span></td><td>P6</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- per-project contribution -->
+  <h2>Contribución por proyecto</h2>
+  <div class="projs">
+    <div class="pj"><div class="pjh"><span>P1</span>SOC Automation Playbook</div><p>6 runbooks + lifecycle de alerta + Active Response (<code>open-soc-case</code>) validado en vivo.</p></div>
+    <div class="pj"><div class="pjh"><span>P2</span>Threat Hunting</div><p>6 hunts grounded en telemetría real del lab + matriz ATT&amp;CK de caza.</p></div>
+    <div class="pj"><div class="pjh"><span>P3</span>Detection Engineering</div><p>5 detecciones base (Sigma + KQL), validadas atacando el lab.</p></div>
+    <div class="pj"><div class="pjh"><span>P4</span>Incident Response</div><p>Ransomware simulado (PICERL) end-to-end; el AR abrió 7 casos solo.</p></div>
+    <div class="pj"><div class="pjh"><span>P5</span>Purple Team</div><p>Matriz de 8 técnicas, 85.7% de cobertura y 2 ciclos de mejora validados.</p></div>
+    <div class="pj"><div class="pjh"><span>P6</span>Threat Intelligence</div><p>CTI de Akira: 16 técnicas analizadas, 8 reglas nuevas y 1 evasión corregida.</p></div>
+    <div class="pj"><div class="pjh"><span>P7</span>SOC Metrics (este)</div><p>Capstone: agrega todo lo anterior en métricas para equipo y dirección.</p></div>
+  </div>
+
+  <!-- improvement cycles -->
+  <h2>Ciclos de mejora (detección que evoluciona)</h2>
+  <div class="tl">
+    <div class="ev"><div class="evh">① certutil — detección agnóstica del sensor <span class="badge" style="margin-left:6px">P5</span></div>
+      <div class="evb">La regla ataba un campo solo-Sysmon → true negative. Fix: casar <code>commandLine</code> (común a 4688 y Sysmon) → cobertura resistente a tamper.</div></div>
+    <div class="ev"><div class="evh">② Impacto T1486 → precursor T1490 (regla 100180) <span class="badge" style="margin-left:6px">P5</span></div>
+      <div class="evb">El IR (P4) reveló que la etapa de impacto no disparaba nada. Se añadió el borrado de shadow copies como precursor detectable. Re-emulado → nivel 13 + caso AR.</div></div>
+    <div class="ev"><div class="evh">③ Akira evade 100180 → regla 100181 <span class="badge" style="margin-left:6px">P6 · CTI-driven</span></div>
+      <div class="evb">La inteligencia real reveló que Akira borra shadow copies por WMI (<code>Get-WmiObject Win32_Shadowcopy …Delete()</code>), evadiendo 100180. Nueva 100181 cierra el punto ciego.</div></div>
+  </div>
+
+  <div class="note">
+    <b>Honestidad metodológica.</b> MTTD/MTTR son de <b>ejercicios controlados</b> del lab aislado (ataques benignos simulados), no SLAs de producción.
+    Las cifras agregan artefactos reales de los repos P1–P6. Las métricas son <b>reproducibles</b> contra el SIEM real: ver
+    <code>metrics-methodology.md</code> (definición + query Wazuh de cada una).
+  </div>
+
+  <footer>
+    <b>SOC Blue Team Portfolio</b> · Laboratorio <code>corp.local</code> · SIEM Wazuh 4.13.1 · Autor <b>José Quintero</b><br>
+    Generado como capstone del Proyecto 7. Métricas y queries de reproducción en <code>projects/07-soc-metrics/metrics-methodology.md</code>.
+  </footer>
+
+</div>
+</body>
+</html>
