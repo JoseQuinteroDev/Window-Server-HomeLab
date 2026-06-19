@@ -1,0 +1,81 @@
+// =====================================================================
+//  Threat Intel (Proyecto 6) — detecciones derivadas de Akira (AA24-109A)
+//  equivalentes KQL (Microsoft Sentinel / Defender XDR)
+//  Lab: corp.local  |  Autor: Jose Quintero
+//  Mapeo 1:1 con las reglas Wazuh 100181/100190-100230 y los Sigma de detections/sigma/.
+//  Sentinel:     SecurityEvent (Windows), Event (Sysmon/PowerShell via AMA).
+//  Defender XDR: DeviceProcessEvents, DeviceEvents.
+// =====================================================================
+
+
+// ---------------------------------------------------------------------
+// 1) INHIBICION DE RECUPERACION via WMI  (T1490)  -- Wazuh 100181
+//    Akira evade vssadmin: Get-WmiObject Win32_Shadowcopy | %{$_.Delete();}
+// ---------------------------------------------------------------------
+DeviceProcessEvents
+| where ProcessCommandLine has "Win32_Shadowcopy"
+| where ProcessCommandLine has_any (".Delete()", "$_.Delete", "ForEach-Object", "| %")
+| project Timestamp, DeviceName, AccountName, InitiatingProcessFileName, ProcessCommandLine
+| sort by Timestamp desc
+// -- Sentinel (Sysmon EID 1 / 4688) --
+// Event | where EventID in (1,4688) | where RenderedDescription has "Win32_Shadowcopy" and RenderedDescription has "Delete"
+
+
+// ---------------------------------------------------------------------
+// 2) VOLCADO DE LSASS  (T1003.001)  -- Wazuh 100190/100191
+//    comsvcs.dll MiniDump (rundll32) o procdump -ma lsass
+// ---------------------------------------------------------------------
+DeviceProcessEvents
+| where (ProcessCommandLine has "comsvcs" and ProcessCommandLine has_any ("MiniDump","#24","#+24"))
+     or (ProcessCommandLine has "procdump" and ProcessCommandLine has_any ("lsass","-ma","-mm"))
+| project Timestamp, DeviceName, AccountName, InitiatingProcessFileName, FileName, ProcessCommandLine
+| sort by Timestamp desc
+
+
+// ---------------------------------------------------------------------
+// 3) RECONOCIMIENTO DE AD  (T1018 / T1482)  -- Wazuh 100200
+//    nltest /dclist | /domain_trusts ; net group "Domain Admins" /domain
+// ---------------------------------------------------------------------
+DeviceProcessEvents
+| where (FileName =~ "nltest.exe" and ProcessCommandLine has_any ("/dclist","/domain_trusts","/trusted_domains","/dsgetdc"))
+     or (FileName in~ ("net.exe","net1.exe") and ProcessCommandLine has "group" and ProcessCommandLine has "/domain")
+| project Timestamp, DeviceName, AccountName, FileName, ProcessCommandLine
+| sort by Timestamp desc
+
+
+// ---------------------------------------------------------------------
+// 4) BLOODHOUND / SHARPHOUND  (T1087.002)  -- Wazuh 100210/100211
+// ---------------------------------------------------------------------
+// -- Defender XDR (colector compilado / cmdline) --
+DeviceProcessEvents
+| where ProcessCommandLine has_any ("Invoke-BloodHound","SharpHound","bloodhound","-CollectionMethod")
+| project Timestamp, DeviceName, AccountName, FileName, ProcessCommandLine
+| sort by Timestamp desc
+// -- Sentinel (ingestor PowerShell en memoria, 4104) --
+// Event | where Source == "Microsoft-Windows-PowerShell" and EventID == 4104
+//       | where RenderedDescription has_any ("Invoke-BloodHound","SharpHound","-CollectionMethod All","-CollectionMethod DCOnly")
+
+
+// ---------------------------------------------------------------------
+// 5) CREACION DE CUENTA  (T1136.001)  -- Wazuh 100220
+//    net user /add  (corroborar con Security 4720)
+// ---------------------------------------------------------------------
+DeviceProcessEvents
+| where FileName in~ ("net.exe","net1.exe")
+| where ProcessCommandLine has "user" and ProcessCommandLine has "/add"
+| project Timestamp, DeviceName, AccountName, ProcessCommandLine
+| sort by Timestamp desc
+// -- Sentinel: corroboracion por evento de cuenta creada --
+// SecurityEvent | where EventID == 4720 | project TimeGenerated, TargetUserName, SubjectUserName, Computer
+
+
+// ---------------------------------------------------------------------
+// 6) HABILITACION DE RDP  (T1021.001 / T1562.004)  -- Wazuh 100230
+//    netsh advfirewall add rule (3389/rdp)  o  fDenyTSConnections=0
+// ---------------------------------------------------------------------
+DeviceProcessEvents
+| where (ProcessCommandLine has "advfirewall" and ProcessCommandLine has "add" and ProcessCommandLine has "rule"
+         and ProcessCommandLine has_any ("3389","rdp","Terminal"))
+     or ProcessCommandLine has "fDenyTSConnections"
+| project Timestamp, DeviceName, AccountName, FileName, ProcessCommandLine
+| sort by Timestamp desc

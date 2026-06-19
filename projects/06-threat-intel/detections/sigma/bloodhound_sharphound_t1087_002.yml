@@ -1,0 +1,35 @@
+title: Enumeracion de dominio con BloodHound / SharpHound
+id: 7c2a1e10-3b44-4f0a-9d21-0a1b2c3d4e09
+status: experimental
+description: |
+  Detecta la recoleccion de relaciones de Active Directory con SharpHound/BloodHound (T1087.002),
+  herramienta que Akira usa para mapear rutas de ataque hacia Domain Admins. Cubre el colector
+  compilado (SharpHound.exe), el flag -CollectionMethod y el ingestor PowerShell Invoke-BloodHound.
+  Nota: la variante en memoria (IEX) se ve mejor en Script Block Logging (4104) -> regla Wazuh 100210.
+  Derivada del informe CTI de Akira (CISA AA24-109A).
+references:
+  - https://attack.mitre.org/techniques/T1087/002/
+  - https://github.com/SpecterOps/BloodHound
+author: Jose Quintero
+date: 2026-06-20
+logsource:
+  category: process_creation
+  product: windows
+detection:
+  selection:
+    CommandLine|contains:
+      - 'Invoke-BloodHound'
+      - 'SharpHound'
+      - 'bloodhound'
+      - '-CollectionMethod'
+  condition: selection
+fields:
+  - CommandLine
+  - Image
+  - ParentImage
+falsepositives:
+  - Auditorias de seguridad internas autorizadas (red team / pentest) que usen BloodHound
+level: high
+tags:
+  - attack.discovery
+  - attack.t1087.002

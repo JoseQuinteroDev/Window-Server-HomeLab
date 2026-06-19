@@ -1,0 +1,37 @@
+title: Borrado de Shadow Copies via WMI (Get-WmiObject Win32_Shadowcopy) - tecnica de Akira
+id: 7c2a1e10-3b44-4f0a-9d21-0a1b2c3d4e06
+status: experimental
+description: |
+  Detecta la inhibicion de recuperacion (T1490) por la via que usa Akira para EVADIR vssadmin:
+  consulta la clase WMI Win32_Shadowcopy y llama a .Delete() sobre cada instantanea, normalmente
+  en una sola linea de PowerShell:  Get-WmiObject Win32_Shadowcopy | ForEach-Object {$_.Delete();}
+  Complementa la deteccion clasica (vssadmin/wmic/wbadmin/bcdedit) que NO casa este patron WMI.
+  Derivada del informe CTI de Akira (CISA AA24-109A).
+references:
+  - https://attack.mitre.org/techniques/T1490/
+  - https://www.cisa.gov/news-events/cybersecurity-advisories/aa24-109a
+author: Jose Quintero
+date: 2026-06-20
+logsource:
+  category: process_creation
+  product: windows
+detection:
+  selection_class:
+    CommandLine|contains: 'Win32_Shadowcopy'
+  selection_delete:
+    CommandLine|contains:
+      - '.Delete()'
+      - '$_.Delete'
+      - 'ForEach-Object'
+      - '| %'
+  condition: selection_class and selection_delete
+fields:
+  - CommandLine
+  - Image
+  - ParentImage
+falsepositives:
+  - Scripts de administracion que purgan instantaneas de forma legitima (deberian estar bajo control de cambios)
+level: high
+tags:
+  - attack.impact
+  - attack.t1490

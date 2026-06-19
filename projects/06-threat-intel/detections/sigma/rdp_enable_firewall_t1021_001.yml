@@ -1,0 +1,41 @@
+title: Habilitacion de RDP (regla de firewall netsh / fDenyTSConnections)
+id: 7c2a1e10-3b44-4f0a-9d21-0a1b2c3d4e0b
+status: experimental
+description: |
+  Detecta la apertura de RDP como preparacion del movimiento lateral (T1021.001), abriendo el
+  firewall con netsh advfirewall (regla para el puerto 3389) o habilitando RDP en el registro
+  (fDenyTSConnections=0). Akira habilita RDP para moverse a sistemas remotos con credenciales
+  robadas. Cambiar la postura del firewall del host es ademas T1562.004. Derivada del CTI de Akira.
+references:
+  - https://attack.mitre.org/techniques/T1021/001/
+  - https://attack.mitre.org/techniques/T1562/004/
+author: Jose Quintero
+date: 2026-06-20
+logsource:
+  category: process_creation
+  product: windows
+detection:
+  selection_netsh:
+    CommandLine|contains|all:
+      - 'advfirewall'
+      - 'add'
+      - 'rule'
+    CommandLine|contains:
+      - '3389'
+      - 'rdp'
+      - 'Terminal'
+  selection_reg:
+    CommandLine|contains: 'fDenyTSConnections'
+  condition: selection_netsh or selection_reg
+fields:
+  - CommandLine
+  - Image
+  - ParentImage
+falsepositives:
+  - Habilitacion legitima de RDP por IT al aprovisionar un equipo (deberia ser puntual y documentada)
+level: medium
+tags:
+  - attack.lateral_movement
+  - attack.t1021.001
+  - attack.defense_evasion
+  - attack.t1562.004
